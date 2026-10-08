@@ -15,11 +15,15 @@ import {
 } from "../../services/authService";
 import { EventCalendar } from "../../components/EventCalendar/EventCalendar";
 import { MessageBox } from "../../components/MessageBox/MessageBox";
-import { Kicker, DatePill, Button, FormField } from "../../components";
+import { MuralBoard } from "../../components/MuralBoard/MuralBoard";
+import { Kicker, Button, FormField } from "../../components";
 import type { UsuarioAutenticado } from "../../types/auth";
 import type { DashboardColaboradorData } from "../../types/dashboard";
 import { VolunteerList } from "../../components/VolunteerList/VolunteerList";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
+import { ChevronDown, ChevronUp } from "lucide-react";
+
+const LIMITE_ACOES_VISIVEIS = 3;
 
 function saudacaoPorHorario(): string {
   const hora = new Date().getHours();
@@ -86,19 +90,21 @@ function SectionCard({
   id,
   title,
   children,
+  className = "",
 }: {
   id: string;
   title: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <section
       aria-labelledby={id}
-      className="rounded-2xl border border-black/10 bg-white p-6"
+      className={`flex flex-col rounded-2xl border border-black/10 bg-white p-4 sm:p-5 ${className}`}
     >
       <h2
         id={id}
-        className="m-0 mb-4 font-display text-lg font-semibold text-black"
+        className="m-0 mb-3 font-display text-lg font-semibold text-black"
       >
         {title}
       </h2>
@@ -124,6 +130,7 @@ export default function DashboardColaborador({
   const [acaoInscritosAberta, setAcaoInscritosAberta] = useState<number | null>(
     null,
   );
+  const [mostrarTodasAcoes, setMostrarTodasAcoes] = useState(false);
   const [estoqueAtualizado, setEstoqueAtualizado] = useState(0);
   const [salvandoEstoque, setSalvandoEstoque] = useState(false);
 
@@ -206,6 +213,9 @@ export default function DashboardColaborador({
       acc + (ev.inscritosDetalhes?.length || ev.voluntariosInscritos || 0),
     0,
   );
+  const acoesExibidas = mostrarTodasAcoes
+    ? eventosCompartilhados
+    : eventosCompartilhados.slice(0, LIMITE_ACOES_VISIVEIS);
 
   const doacoesValor = dadosIniciais?.doacoes.valorTotalMes ?? 4230.5;
   const doacoesQuantidade = dadosIniciais?.doacoes.quantidadeMes ?? 27;
@@ -235,9 +245,7 @@ export default function DashboardColaborador({
         <LogoutButton />
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          <SectionCard id="secao-estoque" title="Estoque de medicamentos">
+      <SectionCard id="secao-estoque" title="Estoque de medicamentos">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <StatCard
                 tone="neutro"
@@ -278,40 +286,74 @@ export default function DashboardColaborador({
                 {salvandoEstoque ? "Salvando..." : "Atualizar estoque"}
               </Button>
             </form>
-          </SectionCard>
+      </SectionCard>
 
-          <SectionCard id="secao-acoes" title="Próximas ações">
-            {eventosCompartilhados.length === 0 ? (
-              <p className="font-body text-sm text-ink-soft">
-                Nenhuma ação agendada no momento.
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(250px,0.9fr)]">
+        <section
+          aria-labelledby="secao-agenda-titulo"
+          className="flex flex-col gap-5 rounded-2xl border border-black/10 bg-white p-4 sm:p-5"
+        >
+          <header className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="m-0 font-mono text-[11px] font-semibold uppercase tracking-wide text-gold">
+                Agenda
               </p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {eventosCompartilhados.map((acao) => {
-                  const { dia, mes } = formatarData(acao.data);
-                  const inscritos = acao.voluntariosInscritos || 0;
+              <h2
+                id="secao-agenda-titulo"
+                className="m-0 font-display text-lg font-semibold text-black"
+              >
+                Eventos disponíveis
+              </h2>
+            </div>
+            <span className="rounded-pill border border-gold bg-gold/5 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-gold">
+              {eventosCompartilhados.length} {eventosCompartilhados.length === 1 ? "ação" : "ações"}
+            </span>
+          </header>
 
-                  return (
-                    <div
-                      key={acao.id}
-                      className="rounded-2xl border border-black/10 bg-white p-3.5 transition hover:border-black/20"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <DatePill label={`${dia} ${mes.toUpperCase()}`} />
-                          <div className="flex flex-col gap-0.5">
-                            <h3 className="m-0 font-display text-[15px] font-semibold text-black">
-                              {acao.titulo}
-                            </h3>
-                            <span className="font-body text-xs text-ink-soft">
-                              {acao.local || "Campinas"} · {inscritos}{" "}
-                              {inscritos === 1 ? "voluntário" : "voluntários"}{" "}
-                              inscritos
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(230px,0.8fr)_minmax(0,1.2fr)]">
+            <EventCalendar
+              events={eventosCompartilhados.map((acao) => ({
+                id: acao.id,
+                title: acao.titulo,
+                date: acao.data,
+                meta: `${acao.local || "Campinas"} · ${acao.vagas || 6} vagas`,
+              }))}
+            />
 
+            <div className="flex flex-col gap-3">
+              {eventosCompartilhados.length === 0 && (
+                <p className="font-body text-sm text-ink-soft">
+                  Nenhum evento disponível no momento.
+                </p>
+              )}
+              {acoesExibidas.map((acao) => {
+                const { dia, mes } = formatarData(acao.data);
+                const inscritos = acao.inscritosDetalhes?.length || acao.voluntariosInscritos || 0;
+                return (
+                  <article
+                    key={acao.id}
+                    className="flex flex-wrap items-center gap-3 rounded-2xl border border-black/10 bg-white p-3 transition hover:border-black/20"
+                  >
+                    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-volunteer-soft">
+                      <strong className="font-display text-lg font-semibold leading-none text-volunteer">
+                        {dia}
+                      </strong>
+                      <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-volunteer">
+                        {mes}
+                      </span>
+                    </div>
+                    <div className="flex min-w-[140px] flex-1 flex-col gap-0.5">
+                      <h3 className="m-0 font-display text-[15px] font-semibold text-black">
+                        {acao.titulo}
+                      </h3>
+                      <p className="m-0 font-body text-xs text-ink-soft">
+                        {acao.local || "Campinas"} · {acao.vagas || 6} vagas
+                      </p>
+                      <span className="font-body text-xs text-ink-soft">
+                        {inscritos} {inscritos === 1 ? "voluntário inscrito" : "voluntários inscritos"}
+                      </span>
+                    </div>
+                    <div className="w-full">
                       <VolunteerList
                         inscritos={acao.inscritosDetalhes || []}
                         vagas={acao.vagas || 6}
@@ -328,92 +370,106 @@ export default function DashboardColaborador({
                         onRemover={() => {}}
                       />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="mt-5">
-              <EventCalendar
-                events={eventosCompartilhados.map((acao) => ({
-                  id: acao.id,
-                  title: acao.titulo,
-                  date: acao.data,
-                  meta: `${acao.local || "Campinas"} · ${acao.voluntariosInscritos || 0} voluntários`,
-                }))}
-              />
+                  </article>
+                );
+              })}
+              {eventosCompartilhados.length > LIMITE_ACOES_VISIVEIS && (
+                <button
+                  type="button"
+                  aria-expanded={mostrarTodasAcoes}
+                  onClick={() => setMostrarTodasAcoes((atual) => !atual)}
+                  className="inline-flex min-h-10 w-fit items-center gap-2 self-center rounded-pill border border-black/15 bg-white px-4 py-2 font-body text-sm font-bold text-black transition-colors hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+                >
+                  {mostrarTodasAcoes
+                    ? "Ver menos ações"
+                    : `Ver mais ações (${eventosCompartilhados.length - LIMITE_ACOES_VISIVEIS})`}
+                  {mostrarTodasAcoes ? (
+                    <ChevronUp size={16} aria-hidden="true" />
+                  ) : (
+                    <ChevronDown size={16} aria-hidden="true" />
+                  )}
+                </button>
+              )}
             </div>
-          </SectionCard>
-        </div>
+          </div>
+        </section>
 
-        <div className="flex flex-col gap-6 lg:sticky lg:top-8">
-          <SectionCard id="secao-doacoes" title="Doações do mês">
-            <div className="grid grid-cols-1 gap-2 rounded-2xl bg-black p-5 ring-1 ring-white/5 lg:gap-3 lg:p-8">
-              <div className="flex min-w-0 flex-col gap-1 border-r border-white/10 pr-4 lg:pr-6">
-                <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-gold">
-                  Arrecadado
-                </span>
-                <span className="font-display text-lg font-semibold text-parchment break-words sm:text-xl">
-                  {formatarMoeda(doacoesValor)}
-                </span>
-                <span className="font-body text-xs text-parchment/60">
-                  este mês
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-col gap-1 pl-1 lg:pl-2">
-                <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-gold">
-                  Doações
-                </span>
-                <span className="font-display text-lg font-semibold text-parchment sm:text-xl">
-                  {doacoesQuantidade}
-                </span>
-                <span className="font-body text-xs text-parchment/60">
-                  {doacoesQuantidade === 1 ? "recebida" : "recebidas"}
-                </span>
-              </div>
+        <SectionCard
+          id="secao-doacoes"
+          title="Doações do mês"
+          className="self-start lg:sticky lg:top-6"
+        >
+          <div className="grid grid-cols-1 gap-2 rounded-2xl bg-black p-5 ring-1 ring-white/5 lg:gap-3 lg:p-8">
+            <div className="flex min-w-0 flex-col gap-1 border-r border-white/10 pr-4 lg:pr-6">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-gold">
+                Arrecadado
+              </span>
+              <span className="font-display text-lg font-semibold text-parchment break-words sm:text-xl">
+                {formatarMoeda(doacoesValor)}
+              </span>
+              <span className="font-body text-xs text-parchment/60">
+                este mês
+              </span>
             </div>
-
-            <a
-              href="/dashboard/doacoes"
-              onClick={abrirDoacoes}
-              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-pill bg-amber px-5 py-2.5 font-body text-sm font-bold text-black transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
-            >
-              Ver gestão de doações
-              <span aria-hidden="true">→</span>
-            </a>
-          </SectionCard>
-
-          <SectionCard id="secao-voluntarios" title="Voluntários">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-body text-sm text-ink-soft">Ativos</span>
-                <strong className="font-display text-lg font-semibold text-black">
-                  {totalVoluntariosAtivos}
-                </strong>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-body text-sm text-ink-soft">
-                  Aguardando confirmação
-                </span>
-                <strong className="font-display text-lg font-semibold text-black">
-                  {totalVoluntariosPendentes}
-                </strong>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-body text-sm text-ink-soft">
-                  Inscrições nas próximas ações
-                </span>
-                <strong className="font-display text-lg font-semibold text-black">
-                  {totalInscricoesProximasAcoes}
-                </strong>
-              </div>
+            <div className="flex min-w-0 flex-col gap-1 pl-1 lg:pl-2">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-gold">
+                Doações
+              </span>
+              <span className="font-display text-lg font-semibold text-parchment sm:text-xl">
+                {doacoesQuantidade}
+              </span>
+              <span className="font-body text-xs text-parchment/60">
+                {doacoesQuantidade === 1 ? "recebida" : "recebidas"}
+              </span>
             </div>
-          </SectionCard>
-        </div>
+          </div>
+
+          <a
+            href="/dashboard/doacoes"
+            onClick={abrirDoacoes}
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-pill bg-amber px-5 py-2.5 font-body text-sm font-bold text-black transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
+          >
+            Ver gestão de doações
+            <span aria-hidden="true">→</span>
+          </a>
+        </SectionCard>
       </div>
 
-      <div className="w-full">
+      <SectionCard id="secao-voluntarios" title="Voluntários">
+        <div className="grid grid-cols-1 divide-y divide-black/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="flex min-h-16 items-center justify-between gap-3 px-3 py-3 sm:px-5">
+            <span className="font-body text-sm text-ink-soft">Ativos</span>
+            <strong className="font-display text-xl font-semibold text-black">
+              {totalVoluntariosAtivos}
+            </strong>
+          </div>
+          <div className="flex min-h-16 items-center justify-between gap-3 px-3 py-3 sm:px-5">
+            <span className="font-body text-sm text-ink-soft">
+              Aguardando confirmação
+            </span>
+            <strong className="font-display text-xl font-semibold text-black">
+              {totalVoluntariosPendentes}
+            </strong>
+          </div>
+          <div className="flex min-h-16 items-center justify-between gap-3 px-3 py-3 sm:px-5">
+            <span className="font-body text-sm text-ink-soft">
+              Inscrições nas próximas ações
+            </span>
+            <strong className="font-display text-xl font-semibold text-black">
+              {totalInscricoesProximasAcoes}
+            </strong>
+          </div>
+        </div>
+      </SectionCard>
+
+      <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-2">
         <MessageBox
           author="colaborador"
+          usuarioNome={usuario?.nome || "Colaborador(a)"}
+          usuarioEmail={usuario?.email || "colaborador@saudecampinas.org"}
+        />
+        <MuralBoard
+          tipoUsuario="colaborador"
           usuarioNome={usuario?.nome || "Colaborador(a)"}
           usuarioEmail={usuario?.email || "colaborador@saudecampinas.org"}
         />

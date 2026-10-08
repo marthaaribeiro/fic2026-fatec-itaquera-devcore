@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import type { UsuarioAutenticado } from "../../types/auth";
 import { Kicker, Button, FormField } from "../../components";
 import { Trash2, Pencil, Check, X, Mail, Phone, Plus } from "lucide-react";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
@@ -82,11 +81,7 @@ const meses = [
 const moeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-interface DashboardDoacoesProps {
-  usuario?: UsuarioAutenticado | null;
-}
-
-export default function DashboardDoacoes({ usuario }: DashboardDoacoesProps) {
+export default function DashboardDoacoes() {
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [doacaoEmEdicao, setDoacaoEmEdicao] = useState<number | null>(null);
   const [formulario, setFormulario] = useState({
@@ -165,26 +160,13 @@ export default function DashboardDoacoes({ usuario }: DashboardDoacoesProps) {
 
   return (
     <main className="mx-auto flex max-w-[1120px] flex-col gap-6 px-6 py-8 md:px-10">
-      {/* Voltar isolado, no topo, à esquerda — separado do botão de ação
-          pra não parecer que são do mesmo grupo (um é navegação, o outro
-          é ação da página). Mesmo padrão da página de Agenda. */}
-      <a
-        href="/dashboard/colaborador"
-        onClick={(evento) => {
-          evento.preventDefault();
-          window.history.pushState(
-            {},
-            "",
-            usuario?.tipoUsuario === "admin"
-              ? "/dashboard/admin"
-              : "/dashboard/colaborador",
-          );
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        }}
-        className="inline-flex w-fit items-center gap-1.5 font-body text-sm font-bold text-black"
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="inline-flex w-fit cursor-pointer items-center gap-1.5 font-body text-sm font-bold text-black"
       >
         <span aria-hidden="true">←</span> Voltar ao dashboard
-      </a>
+      </button>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">

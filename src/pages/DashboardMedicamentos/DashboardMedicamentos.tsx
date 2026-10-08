@@ -2,7 +2,6 @@ import { useState, useEffect, type FormEvent } from "react";
 import { Pencil, Trash2, X, Check } from "lucide-react";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
 import {
-  buscarMedicamentosApi,
   obterMedicamentosCache,
  
 } from "../../services/remedioService";
@@ -166,14 +165,6 @@ export default function DashboardMedicamentos({
   });
 
   useEffect(() => {
-    buscarMedicamentosApi()
-      .then((meds) => {
-        if (Array.isArray(meds) && meds.length > 0) {
-          setMedicamentos(meds);
-        }
-      })
-      .catch(() => {});
-
     function sincronizar() {
       const cache = obterMedicamentosCache();
       if (cache.length > 0) {
@@ -297,35 +288,15 @@ export default function DashboardMedicamentos({
     setConfirmacao(null);
   }
 
-  function voltarParaDashboard(evento: React.MouseEvent<HTMLAnchorElement>) {
-    evento.preventDefault();
-    let dest = "/dashboard/colaborador";
-    try {
-      const u = localStorage.getItem("usuario");
-      if (u) {
-        const parsed = JSON.parse(u);
-        if (
-          parsed.tipo === "adm" ||
-          parsed.tipo === "admin" ||
-          parsed.tipo === "administrador"
-        ) {
-          dest = "/dashboard/admin";
-        }
-      }
-    } catch {}
-    window.history.pushState({}, "", dest);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  }
-
   return (
     <div className="mx-auto flex max-w-[1120px] flex-col gap-6 px-6 py-8 md:px-10">
-      <a
-        href="/dashboard/colaborador"
-        onClick={voltarParaDashboard}
-        className="inline-flex w-fit items-center gap-1.5 font-body text-sm font-bold text-black underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="inline-flex w-fit cursor-pointer items-center gap-1.5 font-body text-sm font-bold text-black underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
       >
         <span aria-hidden="true">←</span> Voltar para o dashboard
-      </a>
+      </button>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>

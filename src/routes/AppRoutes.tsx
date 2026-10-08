@@ -145,14 +145,14 @@ export default function AppRoutes() {
   }
 
 
-  // 2. Proteção de Dashboard: Usuário NÃO logado tentando acessar /dashboard/*
+  // Dashboards disponíveis diretamente, mesmo sem uma sessão local.
   if (!sessao) {
-    // Redireciona a URL para /login e informa o motivo
-    definirAlertaSeguranca(
-      "Acesso restrito. Faça login para acessar o painel.",
-    );
-    window.history.replaceState({}, "", "/login");
-    return <LoginPage />;
+    if (route === "/dashboard/admin") return <DashboardAdmin />;
+    if (route === "/dashboard/colaborador") return <DashboardColaborador />;
+    if (route === "/dashboard/medicamentos") return <DashboardMedicamentos />;
+    if (route === "/dashboard/doacoes") return <DashboardDoacoes />;
+    if (route === "/dashboard/voluntario") return <DashboardVoluntario />;
+    return <Home />;
   }
 
   // 3. Controle de Acesso Baseado em Papel (RBAC) para Usuários Autenticados:
@@ -219,7 +219,7 @@ export default function AppRoutes() {
               onFechar={() => setAvisoSeguranca(null)}
             />
           )}
-          <DashboardDoacoes usuario={usuarioColab} />
+          <DashboardDoacoes />
         </>
       );
     }
@@ -274,7 +274,7 @@ export default function AppRoutes() {
               onFechar={() => setAvisoSeguranca(null)}
             />
           )}
-          <DashboardDoacoes usuario={usuarioAdmin} />
+          <DashboardDoacoes />
         </>
       );
     }

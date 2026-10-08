@@ -4,7 +4,6 @@ import { MessageBox } from "../../components/MessageBox/MessageBox";
 import { MuralBoard } from "../../components/MuralBoard/MuralBoard";
 import {
   obterEventos,
-  buscarEventosApi,
   obterInscricoesVoluntario,
   alternarInscricaoVoluntario,
   type EventoGlobal,
@@ -47,16 +46,6 @@ export default function DashboardVoluntario({
 
     setEventos(obterEventos());
     setInscritos(obterInscricoesVoluntario(emailFinal));
-
-    // Busca eventos ativos da tabela evento do MySQL
-    buscarEventosApi()
-      .then((evs) => {
-        if (Array.isArray(evs) && evs.length > 0) {
-          setEventos(evs);
-          setInscritos(obterInscricoesVoluntario(emailFinal));
-        }
-      })
-      .catch(() => {});
 
     function recarregar() {
       setEventos(obterEventos());

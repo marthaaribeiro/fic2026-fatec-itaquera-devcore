@@ -5,7 +5,6 @@ import { Footer } from "../../components/Footer/Footer";
 import { Kicker } from "../../components/Kicker/Kicker";
 import { Button } from "../../components/Button/Button";
 import {
-  buscarMedicamentosApi,
   obterMedicamentosCache,
   itensFaltandoAgora,
   type MedicamentoItem,
@@ -97,17 +96,9 @@ function Doacao() {
   );
 
   useEffect(() => {
-    let ativo = true;
-
-    buscarMedicamentosApi()
-      .then((lista) => {
-        if (!ativo) return;
-        setMedicamentos(lista);
-        setUltimaAtualizacao(new Date());
-      })
-      .finally(() => {
-        if (ativo) setCarregando(false);
-      });
+    setMedicamentos(obterMedicamentosCache());
+    setUltimaAtualizacao(new Date());
+    setCarregando(false);
 
     // Mesmo evento que o dashboard de medicamentos dispara ao
     // adicionar/editar/excluir um item — mantém "Faltando agora"
@@ -119,7 +110,6 @@ function Doacao() {
     window.addEventListener("ong_medicamentos_atualizados", sincronizar);
 
     return () => {
-      ativo = false;
       window.removeEventListener("ong_medicamentos_atualizados", sincronizar);
     };
   }, []);

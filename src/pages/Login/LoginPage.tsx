@@ -10,35 +10,7 @@ import {
 type ViewMode = "login" | "cadastro" | "recuperar";
 type TipoPerfil = "voluntario" | "func";
 
-interface JwtPayload {
-  id?: number | string;
-  tipo?: string;
-  iat?: number;
-  exp?: number;
-}
-
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-
-// Função para decodificar o token JWT e extrair informações do usuário e perfil
-function decodificarToken(token: string): JwtPayload | null {
-  try {
-    const partes = token.split(".");
-    if (partes.length < 2) return null;
-    const base64Url = partes[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
-}
-
-// Determina para qual rota redirecionar conforme o tipo de usuário cadastrado no banco
+// Determina a rota conforme o perfil local do usuário
 function obterRotaRedirecionamento(tipo?: string): string {
   if (!tipo) return "/dashboard/voluntario";
   const tipoNormalizado = tipo.toLowerCase().trim();
@@ -95,7 +67,7 @@ export default function LoginPage() {
 
   const validarEmail = (valor: string) => /\S+@\S+\.\S+/.test(valor);
 
-  const enviarLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+  const enviarLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const emailNormalizado = login.email.trim().toLowerCase();
@@ -113,13 +85,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 1. Verificação prévia do status de aprovação pelo Administrador
-    // FIX: o bloqueio abaixo só vale para quem TEM registro local
-    // (checagemAcesso.encontrado). Antes, verificarStatusUsuario devolvia
-    // status "aceito" para qualquer e-mail sem registro local, então essa
-    // checagem não bloqueava ninguém desconhecido — mas se a lógica dela for
-    // revista no futuro, o "encontrado" aqui evita bloquear por engano um
-    // usuário real do backend que simplesmente ainda não está na lista local.
     const checagemAcesso = verificarStatusUsuario(emailNormalizado);
 
     if (checagemAcesso.encontrado && checagemAcesso.status === "pendente") {
@@ -141,138 +106,48 @@ export default function LoginPage() {
       return;
     }
 
+    if (!checagemAcesso.encontrado || checagemAcesso.status !== "aceito") {
+      setMensagem({
+        tipo: "erro",
+        texto: "Não há um perfil aprovado localmente para este e-mail.",
+      });
+      return;
+    }
+
     setCarregando(true);
     setMensagem(null);
+    const tipoFinal = normalizarTipoUsuario(checagemAcesso.tipo);
+    const nomeUsuario =
+      checagemAcesso.nome ||
+      (tipoFinal === "admin"
+        ? "Administrador"
+        : tipoFinal === "colaborador"
+          ? "Colaborador"
+          : "Voluntário");
 
-    try {
-      let loginSucesso = false;
-      let tokenFinal = "";
-      let payloadFinal: JwtPayload | null = null;
+    localStorage.setItem("token", `auth_session_${Date.now()}`);
+    localStorage.setItem(
+      "usuario",
+      JSON.stringify({
+        id: checagemAcesso.id ?? Date.now(),
+        tipo: tipoFinal,
+        email: emailNormalizado,
+        nome: nomeUsuario,
+      }),
+    );
+    window.dispatchEvent(new CustomEvent("ong_auth_change"));
 
-      try {
-        const resposta = await fetch(`${API_URL}/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: emailNormalizado,
-            senha: login.senha,
-          }),
-        });
-
-        const dados = await resposta.json().catch(() => ({}));
-
-        if (resposta.ok && dados.token) {
-          loginSucesso = true;
-          tokenFinal = dados.token;
-          payloadFinal = decodificarToken(dados.token);
-        } else if (
-          resposta.status === 401 ||
-          resposta.status === 400 ||
-          resposta.status === 404
-        ) {
-          throw new Error(
-            dados.mensagem ||
-              dados.message ||
-              (resposta.status === 404
-                ? "Usuário não encontrado."
-                : "E-mail ou senha incorretos."),
-          );
-        } else {
-          // Backend online mas sem token retornado
-          if (checagemAcesso.encontrado && checagemAcesso.status === "aceito") {
-            loginSucesso = true;
-            tokenFinal = "auth_session_" + Date.now();
-          } else {
-            throw new Error("Acesso não autorizado.");
-          }
-        }
-      } catch (fetchErr) {
-        // FIX: "Failed to fetch" é a mensagem específica do Chrome/V8 para
-        // falha de rede — no Firefox e no Safari a mensagem é outra, então
-        // essa comparação de string não detectava o modo offline em todo
-        // navegador. `fetch` sempre lança um TypeError quando não consegue
-        // se conectar, então checar isso é confiável em qualquer navegador.
-        const isNetworkError = fetchErr instanceof TypeError;
-
-        if (!isNetworkError) {
-          throw fetchErr;
-        }
-
-        // Se o servidor backend estiver offline (modo demonstração local/mock),
-        // só libera acesso a quem já tem registro local aprovado.
-        if (checagemAcesso.encontrado && checagemAcesso.status === "aceito") {
-          loginSucesso = true;
-          tokenFinal = "auth_session_" + Date.now();
-        } else {
-          throw new Error("Não foi possível conectar ao servidor. Tente novamente em instantes.", {
-            cause: fetchErr,
-          });
-        }
-      }
-
-      if (loginSucesso && tokenFinal) {
-        // Armazena o token JWT imediatamente para evitar qualquer chamada desautenticada
-        localStorage.setItem("token", tokenFinal);
-
-        // FIX: removida a heurística que promovia a admin qualquer e-mail
-        // contendo a substring "adm" (ex.: "adamteste@gmail.com",
-        // "administrativo@x.com"). Isso rodava depois de QUALQUER login bem-
-        // sucedido, inclusive contra o backend real, então um usuário comum
-        // com esse e-mail virava admin no front mesmo o JWT dizendo outro
-        // tipo. O tipo agora vem só do JWT (fonte de verdade, checado no
-        // backend) ou, na ausência dele (sessão local de demonstração), do
-        // registro de aprovação local.
-        const tipoUsuario =
-          payloadFinal?.tipo || checagemAcesso.tipo || "voluntario";
-
-        const tipoFinal = normalizarTipoUsuario(tipoUsuario);
-
-        const nomeUsuario =
-          checagemAcesso.nome ||
-          (tipoFinal === "admin"
-            ? "Administrador"
-            : tipoFinal === "colaborador"
-              ? "Colaborador"
-              : "Voluntário");
-
-        localStorage.setItem(
-          "usuario",
-          JSON.stringify({
-            id: payloadFinal?.id ?? checagemAcesso.id ?? Date.now(),
-            tipo: tipoFinal,
-            email: emailNormalizado,
-            nome: nomeUsuario,
-          }),
-        );
-
-        window.dispatchEvent(new CustomEvent("ong_auth_change"));
-
-        const destino = obterRotaRedirecionamento(tipoFinal);
-
-        setMensagem({
-          tipo: "sucesso",
-          texto: "Login realizado com sucesso! Redirecionando...",
-        });
-
-        window.setTimeout(() => {
-          window.history.pushState({}, "", destino);
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        }, 300);
-      }
-    } catch (erro) {
-      const mensagemErro =
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível realizar o login. Tente novamente.";
-      setMensagem({ tipo: "erro", texto: mensagemErro });
-    } finally {
-      setCarregando(false);
-    }
+    setMensagem({
+      tipo: "sucesso",
+      texto: "Acesso local realizado com sucesso! Redirecionando...",
+    });
+    window.setTimeout(() => {
+      window.history.pushState({}, "", obterRotaRedirecionamento(tipoFinal));
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }, 300);
   };
 
-  const enviarCadastro = async (event: React.FormEvent<HTMLFormElement>) => {
+  const enviarCadastro = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (
@@ -310,72 +185,36 @@ export default function LoginPage() {
     setCarregando(true);
     setMensagem(null);
 
-    try {
-      const resposta = await fetch(`${API_URL}/cadastro`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome: cadastro.nome.trim(),
-          email: cadastro.email.trim().toLowerCase(),
-          senha: cadastro.senha,
-          end: cadastro.end.trim() || "",
-          cep: cadastro.cep.trim() || "",
-          tel: cadastro.telefone.trim(),
-          tipo: cadastro.tipo,
-          aniversario: cadastro.aniversario || null,
-          sobre: cadastro.sobre.trim() || "",
-        }),
-      });
+    adicionarSolicitacao({
+      nome: cadastro.nome,
+      email: cadastro.email,
+      telefone: cadastro.telefone,
+      tipo: cadastro.tipo,
+      sobre: cadastro.sobre,
+      endereco: cadastro.end,
+      cep: cadastro.cep,
+    });
 
-      const dados = await resposta.json().catch(() => ({}));
-
-      if (!resposta.ok) {
-        throw new Error(
-          dados.mensagem ||
-            dados.message ||
-            "Não foi possível concluir o cadastro.",
-        );
-      }
-
-      // Adiciona o novo usuário na fila de solicitações do Administrador com status 'pendente'
-      adicionarSolicitacao({
-        nome: cadastro.nome,
-        email: cadastro.email,
-        telefone: cadastro.telefone,
-        tipo: cadastro.tipo,
-        sobre: cadastro.sobre,
-        endereco: cadastro.end,
-        cep: cadastro.cep,
-      });
-
-      setMensagem({
-        tipo: "sucesso",
-        texto:
-          "Cadastro realizado com sucesso! Sua solicitação está pendente de aprovação pela administração.",
-      });
-      setModo("login");
-      setLogin({ email: cadastro.email.trim(), senha: cadastro.senha });
-      setCadastro({
-        nome: "",
-        email: "",
-        senha: "",
-        confirmarSenha: "",
-        telefone: "",
-        end: "",
-        cep: "",
-        tipo: "voluntario",
-        aniversario: "",
-        sobre: "",
-      });
-    } catch (erro) {
-      const mensagemErro =
-        erro instanceof Error
-          ? erro.message
-          : "Não foi possível concluir o cadastro.";
-      setMensagem({ tipo: "erro", texto: mensagemErro });
-    } finally {
-      setCarregando(false);
-    }
+    setMensagem({
+      tipo: "sucesso",
+      texto:
+        "Solicitação salva neste navegador e pendente de aprovação pela administração.",
+    });
+    setModo("login");
+    setLogin({ email: cadastro.email.trim(), senha: cadastro.senha });
+    setCadastro({
+      nome: "",
+      email: "",
+      senha: "",
+      confirmarSenha: "",
+      telefone: "",
+      end: "",
+      cep: "",
+      tipo: "voluntario",
+      aniversario: "",
+      sobre: "",
+    });
+    setCarregando(false);
   };
 
   const enviarRecuperacao = async (event: React.FormEvent<HTMLFormElement>) => {
