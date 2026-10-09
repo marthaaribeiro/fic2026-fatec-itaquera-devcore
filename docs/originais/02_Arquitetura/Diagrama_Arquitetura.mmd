@@ -1,0 +1,44 @@
+---
+config:
+  layout: dagre
+---
+flowchart TB
+ subgraph ATORES["Atores do sistema"]
+        VISITANTE["Visitante público"]
+        VOLUNTARIO["Voluntário"]
+        COLAB["Colaborador"]
+        ADMIN["Administrador"]
+  end
+ subgraph CLIENTE["Cliente — Navegador"]
+        SPA["SPA React + TypeScript (Vite)<br>Páginas públicas + Login + Dashboards por papel (RBAC)"]
+        LS[("localStorage<br>cache: estoque de medicamentos, sessão")]
+  end
+ subgraph SERVIDOR["Servidor — API REST (Node.js + Express 5)"]
+        ROTAS["Rotas"]
+        MW["Middlewares<br>CORS · Passport (Local + JWT) · bcrypt"]
+        CTRL["Controllers<br>Auth · Remédios · Doações · Eventos · Dashboards"]
+  end
+ subgraph DADOS["Banco de Dados"]
+        MYSQL[("MySQL<br>via driver mysql2")]
+  end
+ subgraph EXTERNO["Canais externos"]
+        WPP["WhatsApp"]
+        INSTA["Instagram"]
+  end
+ subgraph INFRA["Infraestrutura"]
+        GITHUB["Repositório GitHub<br>controle de versão"]
+        HOST["Hospedagem: a definir<br>(orientação futura)"]
+  end
+    SPA <-- leitura/escrita<br>sincroniza via eventos JS --> LS
+    ROTAS --> MW
+    MW --> CTRL
+    VISITANTE --> SPA
+    VOLUNTARIO -- login --> SPA
+    COLAB -- login --> SPA
+    ADMIN -- login --> SPA
+    SPA -- HTTP/REST (fetch)<br>JSON · JWT em cookie httpOnly --> ROTAS
+    CTRL -- queries SQL --> MYSQL
+    SPA -. "link direto<br>(fora do back-end)" .-> WPP & INSTA
+    SERVIDOR -.-> GITHUB
+    CLIENTE -.-> GITHUB
+    GITHUB -.-> HOST
