@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { Header } from '../../components/Header/Header'
 import { Footer } from '../../components/Footer/Footer'
+import { buscarEventosApi } from "../../services/eventApiService";
+import type { EventoGlobal } from "../../types/event";
 import img3 from "/src/assets/img3.jpg";
 import img4 from "/src/assets/img4.jpg";
 import img5 from "/src/assets/img5.jpg";
@@ -7,6 +10,24 @@ import insta from "/src/assets/insta.png";
 import email from "/src/assets/email.png";
 
 export default function Home() {
+  const [eventos, setEventos] = useState<EventoGlobal[]>([]);
+
+  useEffect(() => {
+    let ativo = true;
+    buscarEventosApi()
+      .then((dados) => {
+        if (ativo) setEventos(dados.slice(0, 3));
+      })
+      .catch(() => {
+        if (ativo) setEventos([]);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const imagensEventos = [img3, img4, img5];
+
   return (
     <div>
       <Header
@@ -16,7 +37,7 @@ export default function Home() {
           { label: 'Como ajudar', href: '/como-ajudar' },
           { label: 'Eventos', href: '/eventos' },
           { label: 'Área do voluntário', href: '/login' },
-          { label: 'Contato', href: 'DashboardAdmin/DashboardAdmin.tsx' },
+          { label: 'Contato', href: '/contato' },
         ]}
       />
 
@@ -35,22 +56,17 @@ export default function Home() {
           de medicina e da área da saúde, há 6 anos.
         </p>
 
-        <button
+        <a
+          href="/login"
           className="inline-flex items-center justify-center bg-[#2b241f] text-white text-sm font-medium px-6 py-3 rounded-full mr-4 mb-5 hover:opacity-90 transition-opacity"
-          type="button"
         >
           Quero ser voluntário
-        </button>
-        <button
+        </a>
+        <a
+          href="/doacao"
           className="inline-flex items-center justify-center bg-white text-[#2b241f] text-sm font-medium px-6 py-3 rounded-full border border-[#e2ddd3] mb-5 hover:bg-[#faf8f4] transition-colors"
-          type="button"
         >
           Doar medicamentos
-        </button>
-        <a href="/dashboard/admin" className="block mb-2">
-          <button className="text-sm text-[#2b241f] underline underline-offset-4 hover:opacity-70" type="button">
-            Ir para Admin
-          </button>
         </a>
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-[720px] mx-auto text-left mt-10">
           <div className="border-l-2 border-[#D9A441] pl-4">
@@ -142,31 +158,24 @@ export default function Home() {
              <p className="text-[#5c5852] text-sm leading-relaxed max-w-sm"> Nossas ações acontecem direto na rua, sem endereço fixo. Confira as
              próximas datas e junte-se a nós. </p>
             </div>
-         <button type="button" className="shrink-0 bg-transparent text-[#211d1a] text-sm font-medium px-6 py-3 rounded-full border border-[#2b241f] 
-          hover:bg-[#e9e2d6] transition-colors -bottom-4 left-4"> Ver agenda completa </button>
+         <a href="/eventos" className="shrink-0 bg-transparent text-[#211d1a] text-sm font-medium px-6 py-3 rounded-full border border-[#2b241f] hover:bg-[#e9e2d6] transition-colors"> Ver agenda completa </a>
     </div>
 
    
     <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
       
-      {[
-        { data: "14 SET · MUTIRÃO", titulo: "Atendimento de rua", img: img3, },
-        { data: "21 SET · CAMPANHA", titulo: "Coleta de medicamentos", img: img4, },
-        { data: "05 OUT · CAPACITAÇÃO", titulo: "Roda de novos voluntários", img: img5, },
-      ].map((evento) => (
-        <div key={evento.titulo}>
+      {eventos.map((evento, indice) => (
+        <div key={evento.id}>
           <p className="text-xs tracking-widest text-[#C98A3A] font-semibold uppercase mb-3">
-            {evento.data}
+            {new Date(`${evento.data}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
           </p>
           <h5 className="font-serif text-[#211d1a] text-lg mb-4">
             {evento.titulo}
           </h5>
 
           <div className="relative">
-            <img src={evento.img} alt={evento.titulo}
+            <img src={imagensEventos[indice]} alt={evento.titulo}
              className="w-full h-56 object-cover rounded-sm"/>
-            <button type="button"className="absolute -bottom-4 left-4 bg-[#2b241f] text-white text-xs font-medium px-4 py-2.5 rounded-md hover:opacity-90 transition-opacity">
-            Quero participar </button>
           </div>
         </div>
       ))}
@@ -184,24 +193,24 @@ export default function Home() {
             <span className="inline-block bg-[#6B7A52] text-white text-[11px] tracking-widest font-semibold uppercase px-3 py-1 rounded-full mb-5">
               Área do voluntário
             </span>
-            <h2 className="font-serif text-[#211d1a] text-2xl mb-4">Acompanhe sua inscrição</h2>
+            <h2 className="font-serif text-[#211d1a] text-2xl mb-4">Área do voluntário</h2>
             <ul className="mb-10 space-y-2">
               <li className="text-[#4a4a42] text-sm flex gap-2">
-                <span>—</span> Confirme presença nos mutirões
+                <span>—</span> Consulte a agenda de ações
               </li>
               <li className="text-[#4a4a42] text-sm flex gap-2">
                 <span>—</span> Veja a agenda atualizada
               </li>
               <li className="text-[#4a4a42] text-sm flex gap-2">
-                <span>—</span> Fale direto com a equipe
+                <span>—</span> Acesse as informações da organização
               </li>
             </ul>
-            <button
-              type="button"
+            <a
+              href="/login"
               className="bg-[#2b241f] text-white text-sm font-medium px-6 py-3 rounded-full hover:opacity-90 transition-opacity"
             >
               Entrar
-            </button>
+            </a>
           </div>
 
           <div className="bg-[#DDE4EC] p-10 md:p-12">

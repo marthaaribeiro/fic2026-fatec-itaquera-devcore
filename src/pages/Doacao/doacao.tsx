@@ -7,8 +7,8 @@ import { Button } from "../../components/Button/Button";
 import {
   obterMedicamentosCache,
   itensFaltandoAgora,
-  type MedicamentoItem,
 } from "../../services/remedioService";
+import type { MedicamentoItem } from "../../types/medication";
 
 const NAV_LINKS = [
   { label: "Sobre", href: "/sobre" },

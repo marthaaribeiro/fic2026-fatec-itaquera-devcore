@@ -1,4 +1,5 @@
 import { LogOut } from "lucide-react";
+import { useAuth } from "../../contexts/authContext";
 
 interface LogoutButtonProps {
   destino?: string;
@@ -9,9 +10,10 @@ export function LogoutButton({
   destino = "/login",
   className = "",
 }: LogoutButtonProps) {
+  const { sair } = useAuth();
+
   function handleLogout() {
-    localStorage.removeItem("usuario");
-    localStorage.removeItem("token");
+    sair();
     window.history.pushState({}, "", destino);
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
