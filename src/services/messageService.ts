@@ -1,28 +1,5 @@
 // src/services/messageService.ts
-import { obterSolicitacoes } from "./authService";
-
-export type PapelUsuario = "voluntario" | "colaborador" | "admin";
-
-export interface ContatoDestino {
-  id: string; // "geral" | "admin" | email / id específico
-  nome: string;
-  email: string;
-  tipo: PapelUsuario | "grupo";
-  descricao?: string;
-}
-
-export interface MensagemChat {
-  id: number;
-  canalId: string; // "geral" ou chave única para dm: "dm_email1_email2"
-  remetenteNome: string;
-  remetenteEmail: string;
-  remetenteTipo: PapelUsuario;
-  destinatarioNome: string;
-  destinatarioEmail: string;
-  destinatarioTipo: PapelUsuario | "grupo";
-  texto: string;
-  criadaEm: string; // ISO date
-}
+import type { ContatoDestino, MensagemChat, PapelUsuario } from "../types/message";
 
 const STORAGE_KEY_MENSAGENS = "ong_mensagens_chat";
 
@@ -120,7 +97,6 @@ export function obterDestinatariosPermitidos(
   tipoUsuario: PapelUsuario,
   usuarioEmailAtual: string = "",
 ): ContatoDestino[] {
-  const solicitacoes = obterSolicitacoes();
   const contatos: ContatoDestino[] = [
     {
       id: "geral",
@@ -134,7 +110,10 @@ export function obterDestinatariosPermitidos(
   const emailNormAtual = usuarioEmailAtual.toLowerCase().trim();
 
   // Se não for admin, adiciona a Coordenação Geral
-  if (tipoUsuario !== "admin") {
+  if (
+    tipoUsuario !== "admin" &&
+    emailNormAtual !== "admin@saudecampinas.org"
+  ) {
     contatos.push({
       id: "admin",
       nome: "Coordenação Geral (Administração)",
@@ -142,58 +121,6 @@ export function obterDestinatariosPermitidos(
       tipo: "admin",
       descricao: "Diretoria e coordenação executiva da ONG",
     });
-  }
-
-  // Colaboradores cadastrados
-  const colaboradores = solicitacoes.filter(
-    (s) =>
-      s.tipo === "colaborador" &&
-      s.status === "aceito" &&
-      s.email.toLowerCase().trim() !== emailNormAtual,
-  );
-
-  // Adiciona o colaborador fixo caso não seja o próprio usuário
-  if (emailNormAtual !== "carlos.colab@saudecampinas.org" && emailNormAtual !== "func@gmail.com") {
-    contatos.push({
-      id: "carlos_colab",
-      nome: "Carlos Eduardo (Colaborador)",
-      email: "carlos.colab@saudecampinas.org",
-      tipo: "colaborador",
-      descricao: "Logística e coordenação de rua",
-    });
-  }
-
-  for (const c of colaboradores) {
-    if (c.email.toLowerCase().trim() !== "carlos.colab@saudecampinas.org") {
-      contatos.push({
-        id: `colab_${c.id}`,
-        nome: `${c.nome} (Colaborador)`,
-        email: c.email,
-        tipo: "colaborador",
-        descricao: c.telefone || "Equipe de apoio",
-      });
-    }
-  }
-
-  // Voluntários: SÓ aparecem se o usuário autenticado for Colaborador ou Admin!
-  // Voluntários NUNCA têm acesso a mandar mensagem direta para outros voluntários.
-  if (tipoUsuario === "colaborador" || tipoUsuario === "admin") {
-    const voluntarios = solicitacoes.filter(
-      (s) =>
-        s.tipo === "voluntario" &&
-        s.status === "aceito" &&
-        s.email.toLowerCase().trim() !== emailNormAtual,
-    );
-
-    for (const v of voluntarios) {
-      contatos.push({
-        id: `vol_${v.id}`,
-        nome: `${v.nome} (Voluntário)`,
-        email: v.email,
-        tipo: "voluntario",
-        descricao: v.telefone || "Voluntário cadastrado",
-      });
-    }
   }
 
   return contatos;
