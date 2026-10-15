@@ -1,113 +1,116 @@
-import userModel from "../models/usersModel.js";
+import Usuario from "../models/Usuario.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import verificaIdade from "../utils/verificarIdade.js";
 
 const getFuncionarios = async (_req, res) => {
-  const resposta = await userModel.getFuncM();
-  return res.json(resposta);
-};
-
-const cadastro = async (req, res) => {
-  const { email, senha, tipo } = req.body;
-  const usuario = await userModel.buscarPorEmail(email);
-  if (usuario) {
-    return res.status(400).json({ mensagem: "Usuário já cadastrado!" });
-  }
-
-  if (tipo === "func") {
-    const idade = verificaIdade(req.body.aniversario);
-
-    if (idade < 18) {
-      return res
-        .status(403)
-        .json({ mensagem: "Você deve ser maior de idade para voluntariar!" });
-    }
-  }
-
-  const senhaHash = await bcrypt.hash(senha, 10);
-
-  const dados = { ...req.body, senha: senhaHash };
-
-  const idUser = await userModel.postUserM(dados);
-
-  const token = jwt.sign({ id: idUser, tipo }, process.env.ASSINATURA_TOKEN, {
-    expiresIn: "3d",
-  });
-
-  return res.status(201).json({
-    mensagem: "Cadastro realizado com sucesso",
-    token,
-  });
-};
-
-const login = async (req, res) => {
   try {
-    const { email, senha } = req.body;
-    const usuario = await userModel.buscarPorEmail(email);
-    if (!usuario)
-      return res.status(404).json({ message: "Usuário não encontrado" });
-
-    const confereSenha = await bcrypt.compare(senha, usuario.senha_usuario);
-
-    if (!confereSenha)
-      return res.status(401).json({ mensagem: "Email ou senha incorretos!" });
-
-    const token = jwt.sign(
-      { id: usuario.ID_usuario, tipo: usuario.tipo_usuario },
-      process.env.ASSINATURA_TOKEN,
-    );
-
-    return res.status(200).json({
-      mensagem: "Login realizado com sucesso",
-      token,
+    const funcionarios = await Usuario.findAll({
+      where: { status: true, tipo: "func" },
+      attributes: { exclude: ["senha"] },
     });
-  } catch (error) {
-    return res.status(500).json({
-      mensagem: "Erro ao realizar login.",
-      error: error.message,
-    });
+    return res.status(200).json(funcionarios);
+  } catch (erro) {
+    return res.status(500).json("Erro interno ao recuperar funcionários");
   }
 };
 
-const putUsuarioC = async (req, res) => {
-  const idFuncionario = req.params.id;
-  
-  try {
-    const resposta = await userModel.putFuncM(req.body, idFuncionario);
-    if (resposta === 0)
-      return res.status(404).json({ mensagem: "Funcionário não encontrado" });
+// const cadastro = async (req, res) => {
+//   const { email, senha, tipo } = req.body;
+//   const usuario = await userModel.buscarPorEmail(email);
+//   if (usuario) {
+//     return res.status(400).json({ mensagem: "Usuário já cadastrado!" });
+//   }
 
-    return res.status(200).json({ mensagem: "Funcionário alterado com sucesso!" });
-  } catch (error) {
-    return res.status(500).json({ mensagem: "Erro ao alterar o usuário." });
-  }
-};
+//   if (tipo === "func") {
+//     const idade = verificaIdade(req.body.aniversario);
 
-const deleteUsuarioC = async (req, res) => {
-  try {
-    const resposta = await userModel.deleteFuncM(req.params.id);
+//     if (idade < 18) {
+//       return res
+//         .status(403)
+//         .json({ mensagem: "Você deve ser maior de idade para voluntariar!" });
+//     }
+//   }
 
-    if (resposta !== 0) {
-      return res.status(200).json({
-        mensagem: "Funcionário desativado com sucesso!",
-      });
-    }
+//   const senhaHash = await bcrypt.hash(senha, 10);
 
-    return res.status(404).json({
-      mensagem: "Funcionário não encontrado.",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      mensagem: "Erro ao desativar funcionário.",
-    });
-  }
-};
+//   const dados = { ...req.body, senha: senhaHash };
+
+//   const idUser = await userModel.postUserM(dados);
+
+//   const token = jwt.sign({ id: idUser, tipo }, process.env.ASSINATURA_TOKEN, {
+//     expiresIn: "3d",
+//   });
+
+//   return res.status(201).json({
+//     mensagem: "Cadastro realizado com sucesso",
+//     token,
+//   });
+// };
+
+// const login = async (req, res) => {
+//   try {
+//     const { email, senha } = req.body;
+//     const usuario = await userModel.buscarPorEmail(email);
+//     if (!usuario)
+//       return res.status(404).json({ message: "Usuário não encontrado" });
+
+//     const confereSenha = await bcrypt.compare(senha, usuario.senha_usuario);
+
+//     if (!confereSenha)
+//       return res.status(401).json({ mensagem: "Email ou senha incorretos!" });
+
+//     const token = jwt.sign(
+//       { id: usuario.ID_usuario, tipo: usuario.tipo_usuario },
+//       process.env.ASSINATURA_TOKEN,
+//     );
+
+//     return res.status(200).json({
+//       mensagem: "Login realizado com sucesso",
+//       token,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({
+//       mensagem: "Erro ao realizar login.",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// const putUsuarioC = async (req, res) => {
+//   const idFuncionario = req.params.id;
+
+//   try {
+//     const resposta = await userModel.putFuncM(req.body, idFuncionario);
+//     if (resposta === 0)
+//       return res.status(404).json({ mensagem: "Funcionário não encontrado" });
+
+//     return res.status(200).json({ mensagem: "Funcionário alterado com sucesso!" });
+//   } catch (error) {
+//     return res.status(500).json({ mensagem: "Erro ao alterar o usuário." });
+//   }
+// };
+
+// const deleteUsuarioC = async (req, res) => {
+//   try {
+//     const resposta = await userModel.deleteFuncM(req.params.id);
+
+//     if (resposta !== 0) {
+//       return res.status(200).json({
+//         mensagem: "Funcionário desativado com sucesso!",
+//       });
+//     }
+
+//     return res.status(404).json({
+//       mensagem: "Funcionário não encontrado.",
+//     });
+//   } catch (error) {
+//     return res.status(500).json({
+//       mensagem: "Erro ao desativar funcionário.",
+//     });
+//   }
+// };
 
 export default {
-  cadastro,
-  login,
   getFuncionarios,
-  putUsuarioC,
-  deleteUsuarioC,
 };

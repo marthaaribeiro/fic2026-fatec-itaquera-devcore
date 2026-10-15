@@ -1,17 +1,23 @@
 import "../../config/env.js";
-import mysql from "mysql2/promise";
+import { Sequelize } from "sequelize";
 
-const connection = mysql.createPool({
-  host: process.env.BD_HOST,
-  port: process.env.BD_PORT,
-  user: process.env.BD_USER,
-  password: process.env.BD_PASSWORD,
-  database: process.env.BD_DATABASE,
-  dateStrings: true,
+const connection = new Sequelize(
+  process.env.BD_DATABASE,
+  process.env.BD_USER,
+  process.env.BD_PASSWORD,
+  {
+    host: process.env.BD_HOST,
+    port: process.env.BD_PORT,
+    dialect: "mysql",
 
-  ssl:{
-    rejectUnauthorized: false
-  }
-});
+    dialectOptions: {
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    },
+
+    logging: console.log,
+  },
+);
 
 export default connection;
