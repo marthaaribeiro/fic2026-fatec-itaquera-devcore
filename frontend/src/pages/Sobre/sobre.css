@@ -230,3 +230,28 @@
     max-width: none;
   }
 }
+
+.sobre__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.sobre__photo--hero {
+  max-width: 320px;
+  align-self: center;
+  transform: rotate(-1.2deg);
+}
+
+.sobre__grid-fotos-secundarias .sobre__photo {
+  max-width: 360px;
+}
+
+@media (min-width: 768px) {
+  .sobre__photo--hero {
+    flex: 0 0 380px;
+    max-width: 380px;
+  }
+}

@@ -10,7 +10,7 @@ const NAV_LINKS = [
   { label: "Sobre", href: "/sobre" },
   { label: "Como ajudar", href: "/doacao" },
   { label: "Eventos", href: "/eventos" },
-  { label: "Área do voluntário", href: "/voluntario" },
+  { label: "Área do voluntário", href: "/login" },
   { label: "Contato", href: "/contato" },
 ];
 
@@ -36,11 +36,11 @@ const VALORES = [
 ];
 
 /** Placeholders de foto — trocar cada `PhotoSlot` por uma <img> quando as fotos reais chegarem. */
-const GALERIA = [
-  "Atendimento de rua",
-  "Kits de higiene e doação",
-  "Equipe em ação",
-  "Mutirão de voluntários",
+  const GALERIA = [
+  { url: "/sobre/foto-sobre4.jpeg", alt: "Atendimento de rua" },
+  { url: "/sobre/foto-sobre5.jpeg", alt: "Kits de higiene e doação" },
+  { url: "/sobre/foto-sobre6.jpeg", alt: "Equipe em ação" },
+  { url: "/sobre/foto-sobre7.jpeg", alt: "Mutirão de voluntários" },
 ];
 
 function PhotoSlot({ label, className = "" }: { label: string; className?: string }) {
@@ -70,7 +70,10 @@ function Sobre() {
               risco. É por isso que existimos.
             </p>
           </div>
-          <PhotoSlot label="Foto de capa" className="sobre__photo-slot--hero" />
+        <img 
+  src="/sobre/foto-sobre1.png"
+  alt="Saúde que chega até quem mais precisa" 
+  className="sobre__photo sobre__photo--hero" />
         </section>
 
         <section className="sobre__quem-somos">
@@ -84,8 +87,8 @@ function Sobre() {
             região.
           </p>
           <div className="sobre__grid-fotos-secundarias">
-            <PhotoSlot label="Equipe do projeto" />
-            <PhotoSlot label="Ação na região" />
+            <img src= "/sobre/foto-sobre2.jpeg"  alt="Equipe"  className="sobre__photo" />
+            <img src= "/sobre/foto-sobre3.jpeg"  alt="Equipe"  className="sobre__photo" />
           </div>
         </section>
 
@@ -104,19 +107,21 @@ function Sobre() {
           </div>
         </section>
 
-        <section className="sobre__galeria">
-          <Kicker color="gold">Nosso dia a dia</Kicker>
-          <h2 className="sobre__subtitle">Um pouco do que fazemos na rua.</h2>
-          <div className="sobre__galeria-grid">
-            {GALERIA.map((label) => (
-              <PhotoSlot key={label} label={label} />
-            ))}
-          </div>
-        </section>
+       <section className="sobre__galeria">
+  <Kicker color="gold">Nosso dia a dia</Kicker>
+  <h2 className="sobre__subtitle">Um pouco do que fazemos na rua.</h2>
+  <div className="sobre__galeria-grid">
+    {GALERIA.map((item) => (
+      <img
+        key={item.url}
+        src={item.url}
+        alt={item.alt}
+    className="sobre__photo sobre__photo--hero"
+      />
+    ))}
+  </div>
+</section>
 
-        <p className="sobre__aviso">
-          Aguarde! Em breve mais informações sobre o projeto por aqui.
-        </p>
 
         <section className="sobre__cta">
           <h2 className="sobre__cta-title">Quer fazer parte dessa causa?</h2>
