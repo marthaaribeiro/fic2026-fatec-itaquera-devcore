@@ -66,11 +66,11 @@ Uma aplicação web com uma área pública e uma área restrita para a equipe da
 
 | Nome | Papel | Trilha concluída | GitHub |
 |---|---|---|---|
-| [Sofia Viana Vitorino Ornellas] | Agilista | Introdução a Metodologias Ágeis | [@vitorinosofia] |
-| [Camila Alemi Dutra] | Desenvolvedor(a) Back-end | Desenvolvendo em Node.js | [@CamilaAlemi] |
-| [Evelyn Aquiles Silva de França] | Desenvolvedor(a) Front-end | Desenvolvendo em React.js | [@myevvy] |
-| [Martha Antonia Moreno Ribeiro] | DevOps | Introdução a Cloud | [@marthaaribeiro] |
-| [Pedro Elias Paiva Fernandes] | Desenvolvedor(a) Front-end | Desenvolvendo em React.js | [@gowkiilu4] |
+| Sofia Viana Vitorino Ornellas | Agilista | Introdução a Metodologias Ágeis | [@vitorinosofia](https://github.com/vitorinosofia) |
+| Camila Alemi Dutra | Desenvolvedor(a) Back-end | Desenvolvendo em Node.js | [@CamilaAlemi](https://github.com/CamilaAlemi) |
+| Evelyn Aquiles Silva de França | Desenvolvedor(a) Front-end | Desenvolvendo em React.js | [@myevvy](https://github.com/myevvy) |
+| Martha Antonia Moreno Ribeiro | DevOps | Introdução a Cloud | [@marthaaribeiro](https://github.com/marthaaribeiro) |
+| Pedro Elias Paiva Fernandes | Desenvolvedor(a) Front-end | Desenvolvendo em React.js | [@gowkiilu4](https://github.com/gowkiilua4) |
 
 ## Tecnologias
 
@@ -80,7 +80,7 @@ Uma aplicação web com uma área pública e uma área restrita para a equipe da
 | **Back-end** | Node.js, Express 5, Sequelize, JWT (jsonwebtoken), bcrypt, zod, helmet, express-rate-limit |
 | **Banco de dados** | MySQL 8 |
 | **Qualidade** | Jest e Supertest (back-end), ESLint, Swagger (swagger-ui-express) |
-| **Deploy** | [Front: Vercel] · [API: Render] · [Banco: provedor MySQL] |
+| **Deploy** | Front-end: Azure Static Web Apps, Back-end: Azure App Service, Banco de Dados: Azure Database for MySQL |
 
 <!-- Mantenham esta tabela fiel ao que está nos package.json no momento da entrega. -->
 
@@ -90,9 +90,9 @@ O diagrama completo, com o código-fonte em Mermaid e a imagem exportada, está 
 
 ```mermaid
 flowchart LR
-    U[Usuário<br/>navegador] -->|HTTPS| F[Front-end<br/>React + Vite<br/>hospedado em Vercel]
-    F -->|REST / JSON<br/>JWT no cabeçalho| A[API<br/>Node.js + Express<br/>hospedada em Render]
-    A -->|Sequelize| D[(MySQL<br/>provedor na nuvem)]
+    U[Usuário<br/>navegador] -->|HTTPS| F[Front-end<br/>React + Vite<br/>hospedado no Azure]
+    F -->|REST / JSON<br/>JWT no cabeçalho| A[API<br/>Node.js + Express<br/>hospedado no Azure]
+    A -->|Sequelize| D[(MySQL<br/>Azure Database)]
 ```
 
 <!-- Atualizem plataformas e componentes conforme o deploy real (Anexo IV, item 2.3). -->
@@ -133,8 +133,8 @@ A pasta `docs/originais/` **não é alterada em hipótese alguma**. A evolução
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/[organizacao]/fic2026-[nome-da-fatec]-[nome-da-equipe].git
-cd fic2026-[nome-da-fatec]-[nome-da-equipe]
+git https://github.com/myevvy/fic2026-fatec-itaquera-devcore.git
+cd fic2026-fatec-itaquera-devcore
 ```
 
 ### 2. Preparar o banco de dados
@@ -218,8 +218,8 @@ Os testes automatizados cobrem as funcionalidades principais do back-end, inclui
 
 | Parte | Plataforma | URL |
 |---|---|---|
-| Front-end | [Vercel] | [https://URL-DO-FRONT] |
-| API | [Render] | [https://URL-DA-API] |
+| Front-end | Azure Static Web Apps | [https://URL-DO-FRONT] |
+| API | Azure App Service | [https://URL-DA-API] |
 | Banco de dados | [Provedor MySQL] | (privado) |
 
 As variáveis de ambiente de produção estão descritas nos READMEs de [`frontend/`](frontend/README.md#variáveis-de-ambiente) e [`backend/`](backend/README.md#variáveis-de-ambiente).

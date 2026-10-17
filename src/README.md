@@ -1,12 +1,3 @@
-<!--
-  SUGESTÃO DE README DO FRONT-END (RNF-QUA-06)
-  - Escrito considerando a pasta frontend/ (hoje o front está na raiz do repositório).
-  - As pastas lib/, contexts/ e hooks/, e o uso de Axios, React Query e react-router-dom,
-    seguem o "Guia de melhorias do projeto" (seção 7). Atualizem este arquivo conforme
-    forem implementando, para que ele descreva exatamente o que existe no código.
-  - Comentários como este não aparecem no GitHub; apaguem-nos antes da entrega final.
--->
-
 # Front-end · Projeto Social Saúde Campinas
 
 Aplicação web da plataforma: site institucional da ONG e área restrita para administradores, colaboradores e voluntários.
@@ -73,8 +64,6 @@ A aplicação abre em `http://localhost:5173`.
 | `npm run build` | Verifica os tipos (`tsc -b`) e gera a versão de produção em `dist/` |
 | `npm run preview` | Serve localmente o conteúdo de `dist/`, para conferir o build |
 | `npm run lint` | Verifica o código com o ESLint |
-
-<!-- O script "predev": "npm install" roda um install a cada npm run dev. Sugestão: removê-lo. -->
 
 ## Estrutura de pastas
 
@@ -192,22 +181,13 @@ npm run build      # gera dist/
 npm run preview    # confere o build localmente
 ```
 
-- **Plataforma:** [Vercel / Netlify]
+- **Plataforma:** `Microsoft Azure`
 - **Diretório raiz do projeto na plataforma:** `frontend`
 - **Comando de build:** `npm run build`
 - **Pasta publicada:** `dist`
 - **Variável de ambiente:** `VITE_API_URL` com a URL pública da API, terminando em `/api`.
 
 Como a navegação usa react-router-dom, a plataforma precisa redirecionar todas as rotas para o `index.html`. Sem isso, atualizar a página em `/dashboard/admin` resulta em 404.
-
-- **Vercel**: arquivo `vercel.json` na pasta `frontend/`:
-  ```json
-  { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
-  ```
-- **Netlify**: arquivo `public/_redirects` com a linha:
-  ```
-  /*  /index.html  200
-  ```
 
 ## Problemas comuns
 
