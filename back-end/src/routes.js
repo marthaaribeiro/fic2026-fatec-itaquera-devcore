@@ -15,9 +15,9 @@ routes.put("/usuarios/:id", middleware.verificaToken, usuarioC.putUsuarioC);
 routes.patch("/usuarios/:id", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.alterarStatusFunc);
 
 routes.get("/eventos", eventoC.getEvento);
-// routes.post("/eventos", middleware.verificaToken ,middleware.verificaAdmFunc ,eventoC.postEventoC);
-// routes.put("/eventos/:id", middleware.verificaToken ,middleware.verificaAdmFunc ,eventoC.putEventoC);
-// routes.delete("/eventos/:id", middleware.verificaToken ,middleware.verificaAdmFunc ,eventoC.deleteUsuarioC);
+routes.post("/eventos", middleware.verificaToken ,middleware.verificaAdm ,eventoC.postEventoC);
+routes.put("/eventos/:id", middleware.verificaToken ,middleware.verificaAdmFunc ,eventoC.putEventoC);
+routes.patch("/eventos/:id", middleware.verificaToken ,middleware.verificaAdm ,eventoC.alterarStatusEvento);
 
 routes.get("/remedio", remedioC.getRemedioC);
 // routes.post("/remedio", middleware.verificaToken ,middleware.verificaAdm , remedioC.postRemedioC);
