@@ -142,7 +142,19 @@ export default function LoginPage() {
       texto: "Acesso local realizado com sucesso! Redirecionando...",
     });
     window.setTimeout(() => {
-      window.history.pushState({}, "", obterRotaRedirecionamento(tipoFinal));
+      let destino = obterRotaRedirecionamento(tipoFinal);
+      try {
+        // Volta para a página que mandou a pessoa ao login (ex.: /eventos),
+        // mas só para voluntários: admin e colaborador seguem para o painel.
+        const retorno = sessionStorage.getItem("ong_redirect_apos_login");
+        sessionStorage.removeItem("ong_redirect_apos_login");
+        if (retorno && retorno.startsWith("/") && tipoFinal === "voluntario") {
+          destino = retorno;
+        }
+      } catch {
+        // mantém o destino padrão
+      }
+      window.history.pushState({}, "", destino);
       window.dispatchEvent(new PopStateEvent("popstate"));
     }, 300);
   };

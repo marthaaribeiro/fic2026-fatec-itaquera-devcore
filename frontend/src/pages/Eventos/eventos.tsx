@@ -5,6 +5,7 @@ import { Footer } from "../../components/Footer/Footer";
 import { Kicker } from "../../components/Kicker/Kicker";
 import { Button } from "../../components/Button/Button";
 import { EventCard } from "../../components/EventCard/EventCard";
+import { EventModal } from "../../components/EventModal/EventModal";
 import {
   obterEventos,
   type EventoGlobal,
@@ -49,6 +50,7 @@ function formatMesAno(iso: string) {
 function Eventos() {
   const [filtro, setFiltro] = useState<"Todos" | Categoria>("Todos");
   const [eventos, setEventos] = useState<EventoGlobal[]>([]);
+  const [eventoAbertoId, setEventoAbertoId] = useState<number | null>(null);
 
   useEffect(() => {
     setEventos(obterEventos());
@@ -70,6 +72,8 @@ function Eventos() {
     [filtro, eventos],
   );
 
+  const eventoAberto = eventos.find((e) => e.id === eventoAbertoId) ?? null;
+
   const grupos = useMemo(() => {
     const mapa = new Map<string, EventoGlobal[]>();
     for (const evento of eventosFiltrados) {
@@ -88,7 +92,7 @@ function Eventos() {
           { label: "Sobre", href: "/sobre" },
           { label: "Como ajudar", href: "/doacao" },
           { label: "Eventos", href: "/eventos" },
-          { label: "Área do voluntário", href: "/voluntario" },
+          { label: "Área do voluntário", href: "/login" },
           { label: "Contato", href: "/contato" },
         ]}
       />
@@ -138,6 +142,8 @@ function Eventos() {
                   }
                   photoUrl={evento.photoUrl || heroPlaceholder}
                   photoAlt={evento.photoAlt || evento.titulo}
+                  ctaLabel="Ver detalhes e participar"
+                  onCtaClick={() => setEventoAbertoId(evento.id)}
                 />
               ))}
             </div>
@@ -151,12 +157,20 @@ function Eventos() {
         )}
       </main>
 
+      {eventoAberto && (
+        <EventModal
+          evento={eventoAberto}
+          fotoPadrao={heroPlaceholder}
+          onClose={() => setEventoAbertoId(null)}
+        />
+      )}
+
       <Footer
         navLinks={[
           { label: "Sobre", href: "/sobre" },
           { label: "Como ajudar", href: "/doacao" },
           { label: "Eventos", href: "/eventos" },
-          { label: "Área do voluntário", href: "/voluntario" },
+          { label: "Área do voluntário", href: "/login" },
           { label: "Contato", href: "/contato" },
         ]}
         email="contato@saudecampinas.org"

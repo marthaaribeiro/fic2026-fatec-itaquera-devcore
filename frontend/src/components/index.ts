@@ -14,6 +14,9 @@ export type { DatePillProps } from "./DatePill/DatePill";
 export { EventCard } from "./EventCard/EventCard";
 export type { EventCardProps } from "./EventCard/EventCard";
 
+export { EventModal } from "./EventModal/EventModal";
+export type { EventModalProps } from "./EventModal/EventModal";
+
 export { AccessCard } from "./AccessCard/AccessCard";
 export type { AccessCardProps } from "./AccessCard/AccessCard";
 

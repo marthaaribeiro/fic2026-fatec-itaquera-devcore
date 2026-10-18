@@ -25,7 +25,7 @@ export interface EventoGlobal {
   photoAlt?: string;
 }
 
-const STORAGE_KEY_EVENTOS = "ong_eventos_compartilhados";
+const STORAGE_KEY_EVENTOS = "ong_eventos_compartilhados_v2";
 const STORAGE_KEY_INSCRICOES = "ong_inscricoes_voluntarios";
 
 const NOMES_MOCK_FICTICIOS = [
@@ -76,6 +76,7 @@ export const EVENTOS_INICIAIS: EventoGlobal[] = [
     description:
       "Atendimento de saúde itinerante para pessoas em situação de rua, com kits de higiene e escuta acolhedora.",
     photoAlt: "Voluntária atendendo uma pessoa em situação de rua",
+    photoUrl:"/eventos/foto-evento1.png",
   },
   {
     id: 2,
@@ -90,6 +91,7 @@ export const EVENTOS_INICIAIS: EventoGlobal[] = [
     description:
       "Recolhemos remédios e amostras grátis parados no armário para reforçar o estoque das próximas ações.",
     photoAlt: "Voluntários organizando doações de medicamentos",
+    photoUrl:"/eventos/foto-evento2.png",
   },
   {
     id: 3,
@@ -105,6 +107,7 @@ export const EVENTOS_INICIAIS: EventoGlobal[] = [
     description:
       "Atendimento médico e triagem básica para famílias em vulnerabilidade social.",
     photoAlt: "Atendimento de rua no centro da cidade",
+    photoUrl:"/eventos/foto-evento3.png",
   },
   {
     id: 4,
@@ -120,6 +123,7 @@ export const EVENTOS_INICIAIS: EventoGlobal[] = [
     description:
       "Encontro para quem está começando: rotina das ações, uso do estoque colaborativo e primeiros passos.",
     photoAlt: "Roda de conversa com novos voluntários",
+    photoUrl:"/eventos/foto-evento4.png",
   },
   {
     id: 5,
@@ -134,6 +138,7 @@ export const EVENTOS_INICIAIS: EventoGlobal[] = [
     description:
       "Início da campanha com arrecadação de agasalhos, cobertores e alimentos não perecíveis.",
     photoAlt: "Caixas de doação e alimentos",
+    photoUrl:"/eventos/foto-evento5.png",
   },
 ];
 
