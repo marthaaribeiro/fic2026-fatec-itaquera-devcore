@@ -1,10 +1,12 @@
 import Remedio from "../models/Remedio.js";
+import {Op} from "sequelize";
 
-const getRemedioC = async (_req, res) => {
+const getRemedioC = async (req, res) => {
+  const { status } = req.query;
+  const hoje = new Date();
+  const where = status === "vencidos" ? {data_validade: {[Op.lt]: hoje}} : {data_validade: {[Op.gte]: hoje}}
   try {
-    const remedios = await Remedio.findAll({
-      where: { data_validade: { [Op.gt]: new Date() } },
-    });
+    const remedios = await Remedio.findAll({ where });
 
     return res.status(200).json(remedios);
   } catch (erro) {

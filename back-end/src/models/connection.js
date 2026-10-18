@@ -16,7 +16,7 @@ const connection = new Sequelize(
       },
     },
 
-    logging: console.log,
+    logging: false,
   },
 );
 

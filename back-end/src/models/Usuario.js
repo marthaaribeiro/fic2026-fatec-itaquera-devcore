@@ -22,12 +22,12 @@ const Usuario = connection.define(
     cep: { type: DataTypes.STRING, field: "CEP_usuario" },
     tel: {
       type: DataTypes.STRING,
-      allowNull: false,
       field: "telefone_usuario",
     },
     tipo: { type: DataTypes.STRING, allowNull: false, field: "tipo_usuario" },
     aniversario: { type: DataTypes.DATEONLY, field: "data_nasc" },
     sobre: { type: DataTypes.TEXT, field: "sobre_usuario" },
+    status: {type: DataTypes.BOOLEAN, field: "status_usuario"}
   },
   { tableName: "usuarios", timestamps: false },
 );

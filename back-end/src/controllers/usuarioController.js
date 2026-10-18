@@ -1,116 +1,231 @@
 import Usuario from "../models/Usuario.js";
+import Funcionario from "../models/Funcionario.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import verificaIdade from "../utils/verificarIdade.js";
+import connection from "../models/connection.js";
 
-const getFuncionarios = async (_req, res) => {
+const getUsuarios = async (req, res) => {
   try {
-    const funcionarios = await Usuario.findAll({
-      where: { status: true, tipo: "func" },
+    const { tipo } = req.query;
+
+    const where = { status: "ativo" };
+    if (tipo) where.tipo_usuario = tipo;
+
+    const usuarios = await Usuario.findAll({
+      where,
       attributes: { exclude: ["senha"] },
     });
-    return res.status(200).json(funcionarios);
+
+    return res.status(200).json(usuarios);
   } catch (erro) {
-    return res.status(500).json("Erro interno ao recuperar funcionários");
+    return res.status(500).json({
+      mensagem: "Erro interno ao recuperar usuários",
+      erro: erro.message,
+    });
   }
 };
 
-// const cadastro = async (req, res) => {
-//   const { email, senha, tipo } = req.body;
-//   const usuario = await userModel.buscarPorEmail(email);
-//   if (usuario) {
-//     return res.status(400).json({ mensagem: "Usuário já cadastrado!" });
-//   }
+const cadastro = async (req, res) => {
+  try {
+    const {
+      nome,
+      email,
+      senha,
+      end,
+      cep,
+      tel,
+      tipo,
+      aniversario,
+      sobre,
+      cargo,
+    } = req.body;
 
-//   if (tipo === "func") {
-//     const idade = verificaIdade(req.body.aniversario);
+    const usuarioExiste = await Usuario.findOne({ where: { email } });
+    if (usuarioExiste) {
+      return res.status(400).json({ mensagem: "Usuário já cadastrado!" });
+    }
 
-//     if (idade < 18) {
-//       return res
-//         .status(403)
-//         .json({ mensagem: "Você deve ser maior de idade para voluntariar!" });
-//     }
-//   }
+    if (tipo === "func") {
+      const idade = verificaIdade(aniversario);
+      if (idade < 18) {
+        return res
+          .status(403)
+          .json({ mensagem: "Você deve ser maior de idade para voluntariar!" });
+      }
+    }
 
-//   const senhaHash = await bcrypt.hash(senha, 10);
+    const senhaHash = await bcrypt.hash(senha, 10);
 
-//   const dados = { ...req.body, senha: senhaHash };
+    const novoUsuario = await connection.transaction(async (t) => {
+      const usuario = await Usuario.create(
+        {
+          nome,
+          email,
+          senha: senhaHash,
+          end,
+          cep,
+          tel,
+          tipo: tipo,
+          aniversario,
+          sobre,
+        },
+        { transaction: t },
+      );
 
-//   const idUser = await userModel.postUserM(dados);
+      if (tipo === "funcionário") {
+        await Funcionario.create(
+          { id_usuario: usuario.dataValues.id, cargo },
+          { transaction: t },
+        );
+      }
+      return usuario;
+    });
 
-//   const token = jwt.sign({ id: idUser, tipo }, process.env.ASSINATURA_TOKEN, {
-//     expiresIn: "3d",
-//   });
+    const token = jwt.sign(
+      { id: novoUsuario.dataValues.id, tipo },
+      process.env.ASSINATURA_TOKEN,
+      { expiresIn: "8h" },
+    );
 
-//   return res.status(201).json({
-//     mensagem: "Cadastro realizado com sucesso",
-//     token,
-//   });
-// };
+    return res.status(201).json({
+      mensagem: "Cadastro realizado com sucesso",
+      token,
+    });
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem: "Ocorreu um erro interno durante o cadastro do usuário",
+      erro: erro.message,
+    });
+  }
+};
 
-// const login = async (req, res) => {
-//   try {
-//     const { email, senha } = req.body;
-//     const usuario = await userModel.buscarPorEmail(email);
-//     if (!usuario)
-//       return res.status(404).json({ message: "Usuário não encontrado" });
+const login = async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+    const usuario = await Usuario.findOne({ where: { email } });
+    if (!usuario)
+      return res.status(401).json({ message: "Email ou senha incorretos!" });
 
-//     const confereSenha = await bcrypt.compare(senha, usuario.senha_usuario);
+    const confereSenha = await bcrypt.compare(senha, usuario.senha);
 
-//     if (!confereSenha)
-//       return res.status(401).json({ mensagem: "Email ou senha incorretos!" });
+    if (!confereSenha)
+      return res.status(401).json({ mensagem: "Email ou senha incorretos!" });
 
-//     const token = jwt.sign(
-//       { id: usuario.ID_usuario, tipo: usuario.tipo_usuario },
-//       process.env.ASSINATURA_TOKEN,
-//     );
+    if (usuario.status !== "ativo")
+      return res.status(403).json({ mensagem: "Conta não está ativa." });
 
-//     return res.status(200).json({
-//       mensagem: "Login realizado com sucesso",
-//       token,
-//     });
-//   } catch (error) {
-//     return res.status(500).json({
-//       mensagem: "Erro ao realizar login.",
-//       error: error.message,
-//     });
-//   }
-// };
+    const token = jwt.sign(
+      { id: usuario.dataValues.id, tipo: usuario.dataValues.tipo },
+      process.env.ASSINATURA_TOKEN,
+      { expiresIn: "8h" },
+    );
 
-// const putUsuarioC = async (req, res) => {
-//   const idFuncionario = req.params.id;
+    return res.status(200).json({
+      mensagem: "Login realizado com sucesso",
+      token,
+    });
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem: "Erro interno ao realizar login.",
+      erro: erro.message,
+    });
+  }
+};
 
-//   try {
-//     const resposta = await userModel.putFuncM(req.body, idFuncionario);
-//     if (resposta === 0)
-//       return res.status(404).json({ mensagem: "Funcionário não encontrado" });
+//logout é feito no front apagando o token
 
-//     return res.status(200).json({ mensagem: "Funcionário alterado com sucesso!" });
-//   } catch (error) {
-//     return res.status(500).json({ mensagem: "Erro ao alterar o usuário." });
-//   }
-// };
+const putUsuarioC = async (req, res) => {
+  const idU = Number(req.params.id);
+  const { id, tipo } = req.usuario;
 
-// const deleteUsuarioC = async (req, res) => {
-//   try {
-//     const resposta = await userModel.deleteFuncM(req.params.id);
+  try {
+    if (id !== idU && tipo !== "admin") {
+      return res.status(403).json({ mensagem: "Sem permissão" });
+    }
 
-//     if (resposta !== 0) {
-//       return res.status(200).json({
-//         mensagem: "Funcionário desativado com sucesso!",
-//       });
-//     }
+    const {
+      nome,
+      email,
+      senha,
+      end,
+      cep,
+      tel,
+      aniversario,
+      sobre,
+      cargo,
+      status,
+    } = req.body;
 
-//     return res.status(404).json({
-//       mensagem: "Funcionário não encontrado.",
-//     });
-//   } catch (error) {
-//     return res.status(500).json({
-//       mensagem: "Erro ao desativar funcionário.",
-//     });
-//   }
-// };
+    const usuario = await Usuario.findByPk(idU);
+    if (!usuario) {
+      return res.status(404).json({ mensagem: "Usuário não encontrado" });
+    }
+
+    const dados = { nome, email, end, cep, tel, aniversario, sobre };
+    if (senha) {
+      dados.senha = await bcrypt.hash(senha, 10);
+    }
+
+    await connection.transaction(async (t) => {
+      await usuario.update(dados, { transaction: t });
+
+      if (tipo === "admin") {
+        const funcionario = await Funcionario.findOne({
+          where: { id_usuario: idU },
+          transaction: t,
+        });
+        if (funcionario) {
+          await funcionario.update({ cargo, status }, { transaction: t });
+        }
+      }
+    });
+
+    return res.status(200).json({ mensagem: "Atualizado com sucesso" });
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem: "Erro interno ao atualizar usuário",
+      erro: erro.message,
+    });
+  }
+};
+
+const alterarStatusFunc = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await connection.transaction(async (t) => {
+      const funcionario = await Funcionario.findByPk(id);
+
+      if (!funcionario)
+        return res
+          .status(404)
+          .json({ mensagem: "Funcionário não encontrado." });
+
+      const usuario = await Usuario.findByPk(funcionario.id_usuario, {
+        transaction: t,
+      });
+
+      const novoStatus = usuario.status === "ativo" ? "desativado" : "ativo";
+
+      await funcionario.update({ status: novoStatus }, { transaction: t });
+      await usuario.update({ status: novoStatus }, { transaction: t });
+    });
+
+    return res.status(200).json({
+      mensagem: "Status do funcionário alterado com sucesso!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      mensagem: "Erro ao alterar status do funcionário",
+      erro: error.message,
+    });
+  }
+};
 
 export default {
-  getFuncionarios,
+  getUsuarios,
+  cadastro,
+  login,
+  putUsuarioC,
+  alterarStatusFunc,
 };
