@@ -14,6 +14,8 @@ const getEvento = async (_req, res) => {
   }
 };
 
+// comparar os horarios tb
+
 const postEventoC = async (req, res) => {
   const { id: idUser } = req.usuario;
   const { nome, data, localizacao, desc, inicio, final } = req.body;
@@ -65,12 +67,23 @@ const putEventoC = async (req, res) => {
   try {
     const { id } = req.params;
     const { nome, data, localizacao, desc, inicio, final } = req.body;
+    const dataUsuario = dayjs(data);
+
+    if (!dataUsuario.isValid()) {
+      return res.status(400).json({ mensagem: "Data inválida." });
+    }
+
+    if (dataUsuario.isBefore(dayjs(), "day")) {
+      return res
+        .status(400)
+        .json({ mensagem: "A data inserida deve ser posterior a atual" });
+    }
     const [linhasAfetadas] = await Evento.update(
       { nome, data, localizacao, desc, inicio, final },
       { where: { id } },
     );
 
-    if (linhasAfetadas.length === 0) {
+    if (linhasAfetadas === 0) {
       return res.status(404).json({ mensagem: "Evento não encontrado." });
     }
 
@@ -98,19 +111,22 @@ const alterarStatusEvento = async (req, res) => {
       { where: { id } },
     );
 
-    if (linhasAfetadas.length === 0) {
+    if (linhasAfetadas === 0) {
       return res
         .status(404)
         .json({ mensagem: "Erro ao alterar status do evento." });
     }
-    return res.status(200).json({ mensagem: "Status alterado com sucesso!" });
-  } catch (error) {
     return res
-      .status(500)
+      .status(200)
       .json({
-        mensagem: "Erro interno ao alterar status evento.",
-        erro: error.message,
+        mensagem: "Status alterado com sucesso!",
+        status: evento.status,
       });
+  } catch (error) {
+    return res.status(500).json({
+      mensagem: "Erro interno ao alterar status evento.",
+      erro: error.message,
+    });
   }
 };
 

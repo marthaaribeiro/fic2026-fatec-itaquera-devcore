@@ -9,6 +9,7 @@ const connection = new Sequelize(
     host: process.env.BD_HOST,
     port: process.env.BD_PORT,
     dialect: "mysql",
+    timezone: "-03:00",
 
     dialectOptions: {
       ssl: {

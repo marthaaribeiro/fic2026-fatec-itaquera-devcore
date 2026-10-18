@@ -1,10 +1,16 @@
 import Remedio from "../models/Remedio.js";
-import {Op} from "sequelize";
+import RemedioUsuario from "../models/RemedioUsuario.js";
+import connection from "../models/connection.js";
+import dayjs from "dayjs";
+import { Op } from "sequelize";
 
 const getRemedioC = async (req, res) => {
   const { status } = req.query;
   const hoje = new Date();
-  const where = status === "vencidos" ? {data_validade: {[Op.lt]: hoje}} : {data_validade: {[Op.gte]: hoje}}
+  const where =
+    status === "vencidos"
+      ? { status: 1, data: { [Op.lt]: hoje } }
+      : { status: 1, data: { [Op.gte]: hoje } };
   try {
     const remedios = await Remedio.findAll({ where });
 
@@ -18,37 +24,152 @@ const getRemedioC = async (req, res) => {
   }
 };
 
-// const postRemedioC = async (req, res)=>{
-//     await remedioModel.postRemedio({...req.body,user_add: req.usuario.id});
-//     return res.status(200).json({mensagem: "Remédio cadastrado com sucesso!"});
-// }
+const postRemedioC = async (req, res) => {
+  try {
+    const { id } = req.usuario;
+    const { data, confirmarVencido, ...resto } = req.body;
 
-// const putRemedioC = async (req, res)=>{
-//     const idRemedio = req.params.id;
-//     const resposta = await remedioModel.putRemedio({...req.body, funcionario_id: req.usuario.id}, idRemedio);
+    const dataVencimento = dayjs(data);
 
-//     if(resposta) return res.status(200).json({mensagem: "Remédio alterado com sucesso!"});
+    if (!dataVencimento.isValid()) {
+      return res.status(400).json({ mensagem: "Data inválida." });
+    }
 
-//     return res.json({mensagem: "Ocorreu um erro na alteração do remédio"});
-// }
+    const confirmado = confirmarVencido === true || confirmarVencido === "true";
 
-// const putRemedioQuantidadeC = async (req, res)=>{
-//     const {quantidade} = req.body;
-//     const idRemedio = req.params.id;
-//     const idFunc = req.usuario.id;
-//     if(quantidade < 0) return res.json({mensagem: "Valores negativos não são aceitos para quantidade de remédio"});
+    if (dataVencimento.isBefore(dayjs(), "day") && !confirmado) {
+      return res.status(409).json({
+        mensagem: "O remédio está vencido, deseja cadastrar mesmo assim?",
+        requerConfirmacao: true,
+      });
+    }
 
-//     const resposta = await remedioModel.putQuantidadeRemedio(quantidade, idFunc, idRemedio);
+    const dataFormatada = dataVencimento.format("YYYY-MM-DD");
 
-//     if(resposta) return res.json({mensagem: "Quantidade mudada com sucesso"});
+    const existeRemedio = await Remedio.findOne({
+      where: { nome: resto.nome, data: dataFormatada, status: 1 },
+    });
+    if (existeRemedio) {
+      return res
+        .status(409)
+        .json({
+          mensagem: "Esse remédio já foi cadastrado com essa validade!",
+        });
+    }
 
-//     return res.json({mensagem: "Ocorreu um erro na alteração do remédio"});
-// }
+    await Remedio.create({
+      ...resto,
+      data: dataFormatada,
+      user_add: id,
+    });
 
-// const deleteRemedioC = async (req, res)=>{
-//     const idRemedio = req.params.id;
-//     await remedioModel.deleteRemedio(idRemedio);
-//     return res.status(200).json({mensagem: "Remédio deletado com sucesso!"});
-// }
+    return res
+      .status(201)
+      .json({ mensagem: "Remédio cadastrado com sucesso!" });
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem:
+        "Erro interno ao cadastrar remédio...Comunique-nos sobre o ocorrido",
+      erro: erro.message,
+    });
+  }
+};
 
-export default { getRemedioC };
+const putRemedioC = async (req, res) => {
+  try {
+    const { id: idRemedio } = req.params;
+    const { id: idColaborador } = req.usuario;
+
+    const remedio = await Remedio.findByPk(idRemedio);
+    if (!remedio) return res.status(404).json("Remédio não encontrado");
+
+    await Remedio.update({ ...req.body }, { where: { id: idRemedio } });
+
+    await RemedioUsuario.create({ idRemedio, idColaborador });
+    return res.status(200).json({ mensagem: "Remédio alterado com sucesso!" });
+  } catch (erro) {
+    res.status(500).json({
+      mensagem:
+        "Erro interno ao atualizar remédio...Comunique-nos sobre o ocorrido",
+      erro: erro.message,
+    });
+  }
+};
+
+const alterarRemedioQuantidadeC = async (req, res) => {
+  try {
+    const { quantidade } = req.body;
+    const { id: idRemedio } = req.params;
+    const { id: idColaborador } = req.usuario;
+
+    if (quantidade < 0) {
+      return res.status(400).json({
+        mensagem:
+          "A quantidade deve ser um número inteiro maior ou igual a zero.",
+      });
+    }
+
+    const [linhasAfetadas] = await Remedio.update(
+      { quantidade },
+      { where: { id: idRemedio } },
+    );
+
+    if (linhasAfetadas === 0)
+      return res.status(404).json("Remédio não encontrado");
+
+    await RemedioUsuario.create({ idRemedio, idColaborador });
+
+    return res
+      .status(200)
+      .json({ mensagem: "Quantidade alterada com sucesso!" });
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem: "Erro interno ao alterar quantidade",
+      erro: erro.message,
+    });
+  }
+};
+
+const deleteRemedioC = async (req, res) => {
+  try {
+    const { id: idRemedio } = req.params;
+    const { id: idColaborador } = req.usuario;
+
+    const remedio = await Remedio.findByPk(idRemedio);
+    if (!remedio || remedio.status === 0) {
+      return res.status(404).json({ mensagem: "Remédio não encontrado" });
+    }
+
+    await connection.transaction(async (t) => {
+      const [linhasAfetadas] = await Remedio.update(
+        { status: 0 },
+        { where: { id: idRemedio }, transaction: t },
+      );
+
+      if (linhasAfetadas === 0) {
+        return res.status(404).json("Nenhuma alteração feita no remédio");
+      }
+
+      await RemedioUsuario.create(
+        { idRemedio, idColaborador },
+        { transaction: t },
+      );
+    });
+
+    return res.status(200).json({ mensagem: "Remédio deletado com sucesso!" });
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem:
+        "Erro interno ao deletar remédio...Comunique-nos sobre o ocorrido",
+      erro: erro.message,
+    });
+  }
+};
+
+export default {
+  getRemedioC,
+  postRemedioC,
+  putRemedioC,
+  alterarRemedioQuantidadeC,
+  deleteRemedioC,
+};

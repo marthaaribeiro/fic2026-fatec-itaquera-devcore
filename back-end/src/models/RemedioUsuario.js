@@ -4,7 +4,13 @@ import connection from "./connection.js";
 const RemedioUsuario = connection.define(
   "RemedioUsuario",
   {
-    idAlteracao: {type: DataTypes.INTEGER, autoIncrement: true, allowNull:true, field: "ID_alteracao"},
+    idAlteracao: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: true,
+      field: "ID_alteracao",
+    },
     idRemedio: { type: DataTypes.INTEGER, field: "ID_remedio" },
     idColaborador: { type: DataTypes.INTEGER, field: "ID_colaborador" },
     dataAlteracao: {
