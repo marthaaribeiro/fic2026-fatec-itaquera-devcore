@@ -6,10 +6,12 @@ import {
   obterMensagensChat,
   enviarMensagemChat,
   gerarCanalDmId,
-  type ContatoDestino,
-  type MensagemChat,
-  type PapelUsuario,
 } from "../../services/messageService";
+import type {
+  ContatoDestino,
+  MensagemChat,
+  PapelUsuario,
+} from "../../types/message";
 
 interface MessageBoxProps {
   author: PapelUsuario;

@@ -1,18 +1,12 @@
-export interface MedicamentoItem {
-  id?: number;
-  nome: string;
-  quantidade: number;
-  veiculo: string;
-  viaAdm: string;
-  dose: number;
-  unidadeDose: string;
-  validade: string;
-  lote?: string;
-  vencido?: boolean;
-}
+import { api } from "../lib/api";
+import type { MedicamentoItem } from "../types/medication";
+export type { MedicamentoItem } from "../types/medication";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 const STORAGE_KEY_MEDICAMENTOS = "ong_medicamentos_cache";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 export function normalizarMedicamento(
   raw: Record<string, unknown>,
@@ -50,22 +44,19 @@ export function normalizarMedicamento(
 
 export async function buscarMedicamentosApi(): Promise<MedicamentoItem[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/remedio`, {
-      method: "GET",
-    });
-
-    if (!res.ok) {
-      return obterMedicamentosCache();
-    }
-
-    const dados = await res.json();
-    const listaRaw = Array.isArray(dados.mensagem)
-      ? dados.mensagem
-      : Array.isArray(dados)
-        ? dados
+    const { data } = await api.get<unknown>("/remedio");
+    const listaRaw = Array.isArray(data)
+      ? data
+      : isRecord(data) && Array.isArray(data.mensagem)
+        ? data.mensagem
         : [];
 
-    const normalizados = listaRaw.map(normalizarMedicamento);
+    const normalizados = listaRaw.map((item) => {
+      if (!isRecord(item)) {
+        throw new Error("A API retornou um medicamento em formato inválido.");
+      }
+      return normalizarMedicamento(item);
+    });
     salvarMedicamentosCache(normalizados);
     return normalizados;
   } catch {

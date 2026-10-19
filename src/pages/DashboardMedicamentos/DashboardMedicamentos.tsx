@@ -1,63 +1,15 @@
-import { useState, useEffect, type FormEvent } from "react";
 import { Pencil, Trash2, X, Check } from "lucide-react";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
 import {
-  obterMedicamentosCache,
- 
-} from "../../services/remedioService";
+  useDashboardMedicamentosUI,
+  formatarDataMedicamento,
+  mensagemDeValidade,
+  normalizarNomeMedicamento,
+  statusValidade,
+  type MedicamentosProps,
+} from "../../hooks/ui/useDashboardMedicamentosUI";
 
-export interface MedicamentosProps {
-  nome: string;
-  quantidade: number;
-  veiculo: string;
-  viaAdm: string;
-  dose: number;
-  unidadeDose: string;
-  validade: string;
-}
-
-interface DashboardMedicamentosProps {
-  medicamentosIniciais?: MedicamentosProps[];
-}
-
-interface FormularioMedicamento {
-  nome: string;
-  quantidade: string;
-  veiculo: string;
-  viaAdm: string;
-  dose: string;
-  validade: string;
-}
-
-interface MedicamentoAgrupado {
-  nome: string;
-  lotes: MedicamentosProps[];
-}
-
-interface LoteEmEdicao {
-  nome: string;
-  validade: string;
-}
-
-type Confirmacao =
-  | {
-      tipo: "editar";
-      original: LoteEmEdicao;
-      medicamento: MedicamentosProps;
-    }
-  | {
-      tipo: "excluir";
-      lote: LoteEmEdicao;
-    };
-
-const FORMULARIO_VAZIO: FormularioMedicamento = {
-  nome: "",
-  quantidade: "",
-  veiculo: "",
-  viaAdm: "",
-  dose: "",
-  validade: "",
-};
+export type { MedicamentosProps } from "../../hooks/ui/useDashboardMedicamentosUI";
 
 const VEICULOS = [
   "Comprimido",
@@ -75,218 +27,27 @@ const VIAS_DE_ADMINISTRACAO = [
   "Intravenosa",
 ];
 
-function unidadePorVeiculo(veiculo: string): string {
-  if (veiculo === "Líquido") return "mg/ml";
-  if (veiculo === "Gotas") return "mg/gota";
-  if (veiculo === "Pomada") return "mg/g";
-  return "mg";
-}
-
-function mensagemDeValidade(validade: string): string {
-  const hoje = new Date();
-  const dataValidade = new Date(`${validade}T00:00:00`);
-  const inicioHoje = new Date(
-    hoje.getFullYear(),
-    hoje.getMonth(),
-    hoje.getDate(),
-  );
-  const diferencaEmDias = Math.ceil(
-    (dataValidade.getTime() - inicioHoje.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diferencaEmDias < 0)
-    return `Vencido há ${Math.abs(diferencaEmDias)} dias`;
-  if (diferencaEmDias === 0) return "Vence hoje";
-  return `Vence em ${diferencaEmDias} dias`;
-}
-
-function formatarData(validade: string): string {
-  return new Date(`${validade}T00:00:00`).toLocaleDateString("pt-BR");
-}
-
-function normalizarNome(nome: string): string {
-  return nome.trim().toLocaleLowerCase("pt-BR");
-}
-
-function agruparMedicamentos(
-  medicamentos: MedicamentosProps[],
-): MedicamentoAgrupado[] {
-  const grupos = new Map<string, MedicamentoAgrupado>();
-
-  medicamentos.forEach((medicamento) => {
-    const chaveNome = normalizarNome(medicamento.nome);
-    const grupoAtual = grupos.get(chaveNome);
-
-    if (!grupoAtual) {
-      grupos.set(chaveNome, {
-        nome: medicamento.nome,
-        lotes: [{ ...medicamento }],
-      });
-      return;
-    }
-
-    const loteExistente = grupoAtual.lotes.find(
-      (lote) => lote.validade === medicamento.validade,
-    );
-
-    if (loteExistente) {
-      loteExistente.quantidade += medicamento.quantidade;
-    } else {
-      grupoAtual.lotes.push(medicamento);
-    }
-  });
-
-  return Array.from(grupos.values());
-}
-
-// Classifica a urgência da validade para dar destaque visual sem alterar a lógica de dados
-function statusValidade(validade: string): "vencido" | "proximo" | "ok" {
-  const hoje = new Date();
-  const dataValidade = new Date(`${validade}T00:00:00`);
-  const inicioHoje = new Date(
-    hoje.getFullYear(),
-    hoje.getMonth(),
-    hoje.getDate(),
-  );
-  const diferencaEmDias = Math.ceil(
-    (dataValidade.getTime() - inicioHoje.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  if (diferencaEmDias < 0) return "vencido";
-  if (diferencaEmDias <= 30) return "proximo";
-  return "ok";
-}
-
 export default function DashboardMedicamentos({
   medicamentosIniciais = [],
-}: DashboardMedicamentosProps) {
-  const [medicamentos, setMedicamentos] = useState<MedicamentosProps[]>(() => {
-    const cache = obterMedicamentosCache();
-    return cache.length > 0 ? cache : medicamentosIniciais;
-  });
-
-  useEffect(() => {
-    function sincronizar() {
-      const cache = obterMedicamentosCache();
-      if (cache.length > 0) {
-        setMedicamentos(cache);
-      }
-    }
-
-    window.addEventListener("ong_medicamentos_atualizados", sincronizar);
-    return () => {
-      window.removeEventListener("ong_medicamentos_atualizados", sincronizar);
-    };
-  }, []);
-
-  const [formularioAberto, setFormularioAberto] = useState(false);
-  const [formulario, setFormulario] =
-    useState<FormularioMedicamento>(FORMULARIO_VAZIO);
-  const [loteEmEdicao, setLoteEmEdicao] = useState<LoteEmEdicao | null>(null);
-  const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
-  const [medicamentoAdicionado, setMedicamentoAdicionado] = useState<
-    string | null
-  >(null);
-  const medicamentosAgrupados = agruparMedicamentos(medicamentos);
-  const quantidadeTotal = medicamentos.reduce(
-    (total, medicamento) => total + medicamento.quantidade,
-    0,
-  );
-
-  function atualizarCampo(campo: keyof FormularioMedicamento, valor: string) {
-    setFormulario((estadoAtual) => ({ ...estadoAtual, [campo]: valor }));
-  }
-
-  function impedirAlteracaoPorScroll(
-    evento: React.WheelEvent<HTMLInputElement>,
-  ) {
-    evento.currentTarget.blur();
-  }
-
-  function criarMedicamento(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-
-    const novoMedicamento: MedicamentosProps = {
-      nome: formulario.nome.trim(),
-      quantidade: Number(formulario.quantidade),
-      veiculo: formulario.veiculo.trim(),
-      viaAdm: formulario.viaAdm.trim(),
-      dose: Number(formulario.dose),
-      unidadeDose: unidadePorVeiculo(formulario.veiculo),
-      validade: formulario.validade,
-    };
-
-    if (loteEmEdicao) {
-      setConfirmacao({
-        tipo: "editar",
-        original: loteEmEdicao,
-        medicamento: novoMedicamento,
-      });
-      return;
-    }
-
-    setMedicamentos((listaAtual) => [...listaAtual, novoMedicamento]);
-    setMedicamentoAdicionado(novoMedicamento.nome);
-    fecharFormulario();
-  }
-
-  function editarLote(lote: MedicamentosProps) {
-    setFormulario({
-      nome: lote.nome,
-      quantidade: String(lote.quantidade),
-      veiculo: lote.veiculo,
-      viaAdm: lote.viaAdm,
-      dose: String(lote.dose),
-      validade: lote.validade,
-    });
-    setLoteEmEdicao({ nome: lote.nome, validade: lote.validade });
-    setFormularioAberto(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function solicitarExclusao(lote: MedicamentosProps) {
-    setConfirmacao({
-      tipo: "excluir",
-      lote: { nome: lote.nome, validade: lote.validade },
-    });
-  }
-
-  function fecharFormulario() {
-    setFormulario(FORMULARIO_VAZIO);
-    setLoteEmEdicao(null);
-    setFormularioAberto(false);
-  }
-
-  function confirmarAcao() {
-    if (!confirmacao) return;
-
-    if (confirmacao.tipo === "excluir") {
-      setMedicamentos((listaAtual) =>
-        listaAtual.filter(
-          (medicamento) =>
-            !(
-              normalizarNome(medicamento.nome) ===
-                normalizarNome(confirmacao.lote.nome) &&
-              medicamento.validade === confirmacao.lote.validade
-            ),
-        ),
-      );
-    } else {
-      setMedicamentos((listaAtual) => [
-        ...listaAtual.filter(
-          (medicamento) =>
-            !(
-              normalizarNome(medicamento.nome) ===
-                normalizarNome(confirmacao.original.nome) &&
-              medicamento.validade === confirmacao.original.validade
-            ),
-        ),
-        confirmacao.medicamento,
-      ]);
-      fecharFormulario();
-    }
-
-    setConfirmacao(null);
-  }
+}: { medicamentosIniciais?: MedicamentosProps[] }) {
+  const {
+    medicamentosAgrupados,
+    quantidadeTotal,
+    formularioAberto,
+    setFormularioAberto,
+    formulario,
+    atualizarCampo,
+    impedirAlteracaoPorScroll,
+    criarMedicamento,
+    editarLote,
+    solicitarExclusao,
+    confirmacao,
+    setConfirmacao,
+    confirmarAcao,
+    medicamentoAdicionado,
+    setMedicamentoAdicionado,
+    unidadePorVeiculo,
+  } = useDashboardMedicamentosUI({ medicamentosIniciais });
 
   return (
     <div className="mx-auto flex max-w-[1120px] flex-col gap-6 px-6 py-8 md:px-10">
@@ -480,7 +241,7 @@ export default function DashboardMedicamentos({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {medicamentosAgrupados.map((grupo) => (
             <div
-              key={normalizarNome(grupo.nome)}
+              key={normalizarNomeMedicamento(grupo.nome)}
               className="flex flex-col gap-3 rounded-lg border border-black/10 p-5"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -522,7 +283,7 @@ export default function DashboardMedicamentos({
                           {lote.quantidade} unidades
                         </strong>
                         <span className="font-body text-xs text-ink-soft">
-                          {formatarData(lote.validade)}
+                          {formatarDataMedicamento(lote.validade)}
                         </span>
                       </div>
                       <p className="m-0 font-body text-xs text-ink-soft">
@@ -549,7 +310,7 @@ export default function DashboardMedicamentos({
                         <button
                           type="button"
                           onClick={() => editarLote(lote)}
-                          aria-label={`Editar lote de ${lote.quantidade} unidades de ${grupo.nome}, validade ${formatarData(lote.validade)}`}
+                          aria-label={`Editar lote de ${lote.quantidade} unidades de ${grupo.nome}, validade ${formatarDataMedicamento(lote.validade)}`}
                           className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-pill border border-black/20 bg-white px-3 font-body text-[13px] font-bold text-black transition-colors hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
                         >
                           <Pencil size={14} className="shrink-0" />
@@ -558,7 +319,7 @@ export default function DashboardMedicamentos({
                         <button
                           type="button"
                           onClick={() => solicitarExclusao(lote)}
-                          aria-label={`Excluir lote de ${lote.quantidade} unidades de ${grupo.nome}, validade ${formatarData(lote.validade)}`}
+                          aria-label={`Excluir lote de ${lote.quantidade} unidades de ${grupo.nome}, validade ${formatarDataMedicamento(lote.validade)}`}
                           className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-pill px-3 font-body text-[13px] font-bold text-error/70 transition-colors hover:bg-error/10 hover:text-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
                         >
                           <Trash2 size={14} className="shrink-0" />

@@ -1,80 +1,17 @@
-import { useState, useEffect, type FormEvent } from "react";
 import { EventCalendar } from "../../components/EventCalendar/EventCalendar";
-import { MessageBox } from "../../components/MessageBox/MessageBox";
-import { MuralBoard } from "../../components/MuralBoard/MuralBoard";
-import {
-  obterEventos,
-  obterInscricoesVoluntario,
-  alternarInscricaoVoluntario,
-  type EventoGlobal,
-} from "../../services/eventService";
+import { useDashboardEventos } from "../../hooks/api/useDashboardEventos";
+import { useDashboardVoluntarioUI } from "../../hooks/ui/useDashboardVoluntarioUI";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
 import { X } from "lucide-react";
-
-interface PerfilVoluntario {
-  nascimento: string;
-  sobre: string;
-  habilidades: string;
-}
 
 export default function DashboardVoluntario({
   nome = "Voluntário",
 }: {
   nome?: string;
 }) {
-  const [eventos, setEventos] = useState<EventoGlobal[]>([]);
-  const [perfil, setPerfil] = useState<PerfilVoluntario>({
-    nascimento: "",
-    sobre: "",
-    habilidades: "",
-  });
-  const [editando, setEditando] = useState(false);
-  const [inscritos, setInscritos] = useState<number[]>([]);
-  const [emailUsuario, setEmailUsuario] = useState("");
-
-  useEffect(() => {
-    let emailUser = "";
-    try {
-      const rawUser = localStorage.getItem("usuario");
-      if (rawUser) {
-        const u = JSON.parse(rawUser);
-        if (u.email) emailUser = u.email;
-      }
-    } catch {}
-    const emailFinal = emailUser || "use18r@gmail.com";
-    setEmailUsuario(emailFinal);
-
-    setEventos(obterEventos());
-    setInscritos(obterInscricoesVoluntario(emailFinal));
-
-    function recarregar() {
-      setEventos(obterEventos());
-      setInscritos(obterInscricoesVoluntario(emailFinal));
-    }
-    window.addEventListener("ong_eventos_atualizados", recarregar);
-    return () => {
-      window.removeEventListener("ong_eventos_atualizados", recarregar);
-    };
-  }, [nome]);
-
-  function handleInscricao(eventoId: number) {
-    let emailUser = emailUsuario;
-    let telUser = "(19) 99124-3012";
-    let sobreUser = perfil.sobre || "";
-
-    const res = alternarInscricaoVoluntario(eventoId, {
-      nome,
-      email: emailUser || `${nome.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
-      telefone: telUser,
-      sobre: sobreUser || "Voluntário cadastrado no projeto Saúde Campinas.",
-    });
-    setInscritos(res.inscritos);
-  }
-
-  function salvarPerfil(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    setEditando(false);
-  }
+  const { eventos, erroAgenda } = useDashboardEventos();
+  const { perfil, setPerfil, editando, setEditando, salvarPerfil } =
+    useDashboardVoluntarioUI();
 
   return (
     <main className="mx-auto flex max-w-[1120px] flex-col gap-6 px-6 py-8 md:px-10">
@@ -87,8 +24,7 @@ export default function DashboardVoluntario({
             Olá, {nome.split(" ")[0]}.
           </h1>
           <p className="m-0 font-body text-sm text-ink-soft">
-            Encontre sua próxima ação, compartilhe no mural e envie recados para
-            a equipe.
+            Consulte a agenda de ações cadastradas pela equipe.
           </p>
         </div>
         <LogoutButton />
@@ -115,10 +51,15 @@ export default function DashboardVoluntario({
               id: evento.id,
               title: evento.titulo,
               date: evento.data,
-              meta: `${evento.local || "Campinas"} · ${evento.vagas || 6} vagas`,
+              meta: evento.local || "Campinas",
             }))}
           />
           <div className="flex flex-col gap-3">
+            {erroAgenda && (
+              <p role="alert" className="m-0 font-body text-sm text-error">
+                {erroAgenda}
+              </p>
+            )}
             {eventos.length === 0 && (
               <p className="font-body text-sm text-ink-soft">
                 Nenhum evento disponível no momento.
@@ -126,7 +67,6 @@ export default function DashboardVoluntario({
             )}
             {eventos.map((evento) => {
               const data = new Date(`${evento.data}T00:00:00`);
-              const inscrito = inscritos.includes(evento.id);
               return (
                 <article
                   key={evento.id}
@@ -147,21 +87,9 @@ export default function DashboardVoluntario({
                       {evento.titulo}
                     </h3>
                     <p className="m-0 font-body text-xs text-ink-soft">
-                      {evento.local || "Campinas"} · {evento.vagas || 6} vagas
+                      {evento.local || "Campinas"}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    aria-pressed={inscrito}
-                    onClick={() => handleInscricao(evento.id)}
-                    className={
-                      inscrito
-                        ? "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-pill border border-volunteer bg-volunteer-soft px-4 py-2 font-body text-sm font-bold text-[14px] text-volunteer transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
-                        : "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-pill bg-black px-4 py-2 font-body text-sm font-bold text-white text-[14px] transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
-                    }
-                  >
-                    {inscrito ? "✓ Inscrito" : "Quero participar"}
-                  </button>
                 </article>
               );
             })}
@@ -169,19 +97,7 @@ export default function DashboardVoluntario({
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <MessageBox
-          author="voluntario"
-          usuarioNome={nome}
-          usuarioEmail={emailUsuario}
-        />
-
-        <MuralBoard
-          tipoUsuario="voluntario"
-          usuarioNome={nome}
-          usuarioEmail={emailUsuario}
-        />
-
+      <section>
         <article className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-white p-6 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

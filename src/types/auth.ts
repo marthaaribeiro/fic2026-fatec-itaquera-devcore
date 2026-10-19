@@ -1,34 +1,24 @@
 // src/types/auth.ts
 // Tipos compartilhados entre o front (React) e o contrato esperado do back (Node + MySQL).
-// Combine estes tipos com sua colega antes dela implementar as rotas.
 
-export type TipoUsuario = "voluntario" | "colaborador" | "admin";
-
-export interface LoginCredentials {
-  email: string;
-  senha: string;
-  tipoUsuario: TipoUsuario;
-}
-
-export interface UsuarioAutenticado {
-  id: string;
+export type TipoUsuario = 'adm' | 'func' | 'voluntario';
+export interface Usuario { id: number; nome: string; email: string; tipo: TipoUsuario }
+export interface LoginResposta { token: string; usuario: Usuario }
+export interface SessaoUsuario {
+  id: number | string;
   nome: string;
   email: string;
-  tipoUsuario: TipoUsuario;
-  // Ex.: "gestao_estoque", "financeiro" — opcional, útil se colaboradores tiverem permissões distintas
-  permissoes?: string[];
+  tipo: 'admin' | 'colaborador' | 'voluntario';
+  token: string;
 }
-
-export interface LoginResponse {
-  usuario: UsuarioAutenticado;
-  mensagem?: string;
+export interface CadastroDados {
+nome: string; email: string; senha: string; tipo: 'func' | 'voluntario';
+dataNasc: string; telefone?: string; endereco?: string; cep?: string; sobre?: string;
 }
-
-export interface ApiErrorPayload {
-  mensagem: string;
-  codigo?:
-    | "CREDENCIAIS_INVALIDAS"
-    | "USUARIO_NAO_ENCONTRADO"
-    | "MUITAS_TENTATIVAS"
-    | "ERRO_INTERNO";
+export interface Solicitacao extends Usuario {
+telefone?: string; dataNasc?: string; sobre?: string;
+statusCadastro: 'pendente' | 'aprovado' | 'rejeitado';
 }
+export const rotaInicial: Record<TipoUsuario, string> = {
+adm: '/dashboard/admin', func: '/dashboard/colaborador', voluntario: '/dashboard/voluntario',
+};
