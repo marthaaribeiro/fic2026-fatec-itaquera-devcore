@@ -13,12 +13,25 @@ export interface HeaderProps {
   onCtaClick?: () => void;
 }
 
+const irParaLogin = () => {
+  window.location.href = "/login";
+};
+
+const irParaDoacao = () => {
+  window.location.href = "/doacao";
+};
+
 /**
  * Cabeçalho do site. Mobile-first: por padrão mostra só a marca + menu
  * hambúrguer; o nav completo e os botões de ação aparecem a partir do
  * breakpoint md (960px), configurado no tailwind.config.ts.
  */
-export function Header({ logoUrl, navLinks, onLoginClick, onCtaClick }: HeaderProps) {
+export function Header({
+  logoUrl,
+  navLinks,
+  onLoginClick = irParaLogin,
+  onCtaClick = irParaDoacao,
+}: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (

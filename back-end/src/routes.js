@@ -9,28 +9,20 @@ routes.post("/cadastro", usuarioC.cadastro);
 
 routes.post("/login" ,usuarioC.login);
 
-routes.get("/pagAdm", middleware.verificaToken ,middleware.verificaAdm, (req,res)=>{
-    res.json({mensagem: "Acesso Permitido!", usuario: req.usuario});
-}); //no front verificar se a resposta enviada pelo token é o certo
+routes.get("/usuarios", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.getUsuarios);
+routes.post("/usuarios", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.cadastro);
+routes.put("/usuarios/:id", middleware.verificaToken, usuarioC.putUsuarioC);
+routes.delete("/usuarios/:id", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.alterarStatusFunc);
 
-routes.get("/pagFunc", middleware.verificaToken ,middleware.verificaFunc, (req,res)=>{
-    res.json({mensagem: "Acesso Permitido!", usuario: req.usuario});
-}); //no front verificar se a resposta enviada pelo token é o certo
-
-routes.get("/funcionarios", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.getFuncionarios);
-routes.post("/funcionarios", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.cadastro);
-routes.put("/funcionarios/:id", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.putUsuarioC);
-routes.delete("/funcionarios/:id", middleware.verificaToken ,middleware.verificaAdm ,usuarioC.deleteUsuarioC);
-
-routes.get("/eventos", eventoC.getEventoC);
-routes.post("/eventos", middleware.verificaToken ,middleware.verificaAdmFunc ,eventoC.postEventoC);
+routes.get("/eventos", eventoC.getEvento);
+routes.post("/eventos", middleware.verificaToken ,middleware.verificaAdm ,eventoC.postEventoC);
 routes.put("/eventos/:id", middleware.verificaToken ,middleware.verificaAdmFunc ,eventoC.putEventoC);
-routes.delete("/eventos/:id", middleware.verificaToken ,middleware.verificaAdmFunc ,eventoC.deleteUsuarioC);
+routes.delete("/eventos/:id", middleware.verificaToken ,middleware.verificaAdm ,eventoC.alterarStatusEvento);
 
 routes.get("/remedio", remedioC.getRemedioC);
-routes.post("/remedio", middleware.verificaToken ,middleware.verificaAdm , remedioC.postRemedioC);
+routes.post("/remedio", middleware.verificaToken ,middleware.verificaAdmFunc , remedioC.postRemedioC);
 routes.put("/remedio/:id", middleware.verificaToken ,middleware.verificaAdm ,remedioC.putRemedioC);
-routes.put("/remedio/:id/quantidade", middleware.verificaToken ,middleware.verificaFunc ,remedioC.putRemedioQuantidadeC);
+routes.patch("/remedio/:id/quantidade", middleware.verificaToken ,middleware.verificaAdmFunc ,remedioC.alterarRemedioQuantidadeC);
 routes.delete("/remedio/:id", middleware.verificaToken ,middleware.verificaAdm ,remedioC.deleteRemedioC);
 
 export default routes;

@@ -1,46 +1,133 @@
-import eventoModel from "../models/eventosModel.js";
+import Evento from "../models/Evento.js";
+import dayjs from "dayjs";
 
-const getEventoC = async (_req, res) => {
-  const resposta = await eventoModel.getEventoM();
-  return res.json(resposta);
+const getEvento = async (_req, res) => {
+  try {
+    const eventos = await Evento.findAll({ where: { status: true } });
+    return res.status(200).json(eventos);
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem:
+        "Erro interno ao cadastrar evento...Comunique-nos sobre o ocorrido",
+      erro: erro.message,
+    });
+  }
 };
 
+// comparar os horarios tb
+
 const postEventoC = async (req, res) => {
-  const existeEvento = await eventoModel.buscarPorNome(req.body.nome);
-  if (existeEvento) {
-    return res.json({ mensagem: "Esse evento já foi cadastrado!" });
+  const { id: idUser } = req.usuario;
+  const { nome, data, localizacao, desc, inicio, final } = req.body;
+  try {
+    const existeEvento = await Evento.findOne({
+      where: { nome, data_evento: data },
+    });
+    if (existeEvento) {
+      return res
+        .status(409)
+        .json({ mensagem: "Esse evento já foi cadastrado!" });
+    }
+
+    const dataUsuario = dayjs(data);
+
+    if (!dataUsuario.isValid()) {
+      return res.status(400).json({ mensagem: "Data inválida." });
+    }
+
+    if (dataUsuario.isBefore(dayjs(), "day")) {
+      return res
+        .status(400)
+        .json({ mensagem: "A data inserida deve ser posterior a atual" });
+    }
+
+    console.log(data);
+
+    await Evento.create({
+      nome,
+      data,
+      localizacao,
+      desc,
+      inicio,
+      final,
+      idUser,
+    });
+
+    return res.status(201).json("Evento cadastrado com sucesso!");
+  } catch (erro) {
+    return res.status(500).json({
+      mensagem:
+        "Erro interno ao cadastrar evento...Comunique-nos sobre o ocorrido",
+      erro: erro.message,
+    });
   }
-  const resposta = await eventoModel.postEventoM(req.body);
-  return res.json({ idEvento: resposta });
 };
 
 const putEventoC = async (req, res) => {
-  const idEvento = req.params.id;
   try {
-    const resposta = await eventoModel.putEventoM(req.body, idEvento);
+    const { id } = req.params;
+    const { nome, data, localizacao, desc, inicio, final } = req.body;
+    const dataUsuario = dayjs(data);
 
-    if (resposta !== 0) {
-      return res.status(200).json({ mensagem: "Evento alterado com sucesso!" });
+    if (!dataUsuario.isValid()) {
+      return res.status(400).json({ mensagem: "Data inválida." });
     }
 
-    return res.status(404).json({ mensagem: "Evento não encontrado." });
+    if (dataUsuario.isBefore(dayjs(), "day")) {
+      return res
+        .status(400)
+        .json({ mensagem: "A data inserida deve ser posterior a atual" });
+    }
+    const [linhasAfetadas] = await Evento.update(
+      { nome, data, localizacao, desc, inicio, final },
+      { where: { id } },
+    );
+
+    if (linhasAfetadas === 0) {
+      return res.status(404).json({ mensagem: "Evento não encontrado." });
+    }
+
+    return res.status(200).json({ mensagem: "Evento alterado com sucesso!" });
   } catch (error) {
-    return res.status(500).json({ mensagem: error.message });
+    return res.status(500).json({
+      mensagem: "Erro interno ao atualizar o evento",
+      erro: error.message,
+    });
   }
 };
 
-const deleteUsuarioC = async (req, res) => {
+// caso o adm queira cancelar ou ativar um evento novamente
+const alterarStatusEvento = async (req, res) => {
   try {
-    const resposta = await eventoModel.deleteEventoM(req.params.id);
-
-    if (resposta !== 0) {
-      return res.status(200).json({ mensagem: "Evento desativado com sucesso!" });
+    const { id } = req.params;
+    const evento = await Evento.findByPk(id);
+    if (!evento) {
+      return res.status(404).json({ mensagem: "Evento não encontrado" });
     }
 
-    return res.status(404).json({ mensagem: "Evento não encontrado." });
+    const novoStatus = evento.status == 1 ? 0 : 1;
+    const [linhasAfetadas] = await Evento.update(
+      { status: novoStatus },
+      { where: { id } },
+    );
+
+    if (linhasAfetadas === 0) {
+      return res
+        .status(404)
+        .json({ mensagem: "Erro ao alterar status do evento." });
+    }
+    return res
+      .status(200)
+      .json({
+        mensagem: "Status alterado com sucesso!",
+        status: evento.status,
+      });
   } catch (error) {
-    return res.status(500).json({ mensagem: "Erro ao desativar evento." });
+    return res.status(500).json({
+      mensagem: "Erro interno ao alterar status evento.",
+      erro: error.message,
+    });
   }
 };
 
-export default { postEventoC, getEventoC, putEventoC, deleteUsuarioC };
+export default { getEvento, postEventoC, putEventoC, alterarStatusEvento };

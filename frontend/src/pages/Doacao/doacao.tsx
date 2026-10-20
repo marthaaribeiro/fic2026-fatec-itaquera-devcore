@@ -14,7 +14,7 @@ const NAV_LINKS = [
   { label: "Sobre", href: "/sobre" },
   { label: "Como ajudar", href: "/doacao" },
   { label: "Eventos", href: "/eventos" },
-  { label: "Área do voluntário", href: "/voluntario" },
+  { label: "Área do voluntário", href: "/login" },
   { label: "Contato", href: "/contato" },
 ];
 
