@@ -11,7 +11,7 @@ import {
   alternarInscricaoVoluntario,
   obterInscricoesVoluntario,
   type EventoGlobal,
-} from "../../services/eventService";
+} from "../../services/eventApiService";
 
 export const CHAVE_REDIRECT_APOS_LOGIN = "ong_redirect_apos_login";
 

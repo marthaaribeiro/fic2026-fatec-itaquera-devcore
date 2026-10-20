@@ -1,67 +1,10 @@
-import { useState, type FormEvent } from "react";
 import { Kicker, Button, FormField } from "../../components";
 import { Trash2, Pencil, Check, X, Mail, Phone, Plus } from "lucide-react";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
-
-type StatusDoacao = "aprovada" | "pendente" | "recusada";
-
-interface Doacao {
-  id: number;
-  nome: string;
-  email: string;
-  telefone: string;
-  valor: number;
-  data: string;
-  status: StatusDoacao;
-}
-
-const DOACOES_INICIAIS: Doacao[] = [
-  {
-    id: 1,
-    nome: "Ana Paula Mendes",
-    email: "ana.mendes@email.com",
-    telefone: "(19) 99123-4567",
-    valor: 850,
-    data: "2026-08-04",
-    status: "aprovada",
-  },
-  {
-    id: 2,
-    nome: "Instituto Bem Viver",
-    email: "contato@bemviver.org",
-    telefone: "(19) 3234-1000",
-    valor: 650,
-    data: "2026-08-12",
-    status: "aprovada",
-  },
-  {
-    id: 3,
-    nome: "Carlos Eduardo Lima",
-    email: "carlos.lima@email.com",
-    telefone: "(19) 99876-1122",
-    valor: 500,
-    data: "2026-08-18",
-    status: "pendente",
-  },
-  {
-    id: 4,
-    nome: "Mariana Souza",
-    email: "mariana.souza@email.com",
-    telefone: "(19) 99221-8833",
-    valor: 120,
-    data: "2026-08-22",
-    status: "pendente",
-  },
-  {
-    id: 5,
-    nome: "Rafael Nogueira",
-    email: "rafael.nogueira@email.com",
-    telefone: "(19) 99771-2244",
-    valor: 300,
-    data: "2026-08-25",
-    status: "recusada",
-  },
-];
+import {
+  useDashboardDoacoesUI,
+  type StatusDoacao,
+} from "../../hooks/ui/useDashboardDoacoesUI";
 
 const meses = [
   "Janeiro",
@@ -82,81 +25,27 @@ const moeda = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function DashboardDoacoes() {
-  const [formularioAberto, setFormularioAberto] = useState(false);
-  const [doacaoEmEdicao, setDoacaoEmEdicao] = useState<number | null>(null);
-  const [formulario, setFormulario] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
-    valor: "",
-    data: "",
-  });
-  const [doacoes, setDoacoes] = useState(DOACOES_INICIAIS);
-  const [mesSelecionado, setMesSelecionado] = useState(7);
-  const [aba, setAba] = useState<StatusDoacao>("aprovada");
-
-  const doacoesDoMes = doacoes.filter(
-    (doacao) => Number(doacao.data.slice(5, 7)) - 1 === mesSelecionado,
-  );
-  const aprovadas = doacoesDoMes.filter(
-    (doacao) => doacao.status === "aprovada",
-  );
-  const pendentes = doacoesDoMes.filter(
-    (doacao) => doacao.status === "pendente",
-  );
-  const recusadas = doacoesDoMes.filter(
-    (doacao) => doacao.status === "recusada",
-  );
-  const exibidas =
-    aba === "aprovada" ? aprovadas : aba === "pendente" ? pendentes : recusadas;
-  const total = aprovadas.reduce((soma, doacao) => soma + doacao.valor, 0);
-  const diasComDoacao = new Set(
-    doacoesDoMes.map((doacao) => Number(doacao.data.slice(8, 10))),
-  );
-
-  function salvarDoacao(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    const registro = {
-      nome: formulario.nome.trim(),
-      email: formulario.email.trim(),
-      telefone: formulario.telefone.trim(),
-      valor: Number(formulario.valor),
-      data: formulario.data,
-      status: "pendente" as StatusDoacao,
-    };
-    if (doacaoEmEdicao) {
-      setDoacoes((atuais) =>
-        atuais.map((doacao) =>
-          doacao.id === doacaoEmEdicao ? { ...doacao, ...registro } : doacao,
-        ),
-      );
-    } else {
-      setDoacoes((atuais) => [...atuais, { ...registro, id: Date.now() }]);
-    }
-    setFormulario({ nome: "", email: "", telefone: "", valor: "", data: "" });
-    setDoacaoEmEdicao(null);
-    setFormularioAberto(false);
-  }
-
-  function editarDoacao(doacao: Doacao) {
-    setFormulario({
-      nome: doacao.nome,
-      email: doacao.email,
-      telefone: doacao.telefone,
-      valor: String(doacao.valor),
-      data: doacao.data,
-    });
-    setDoacaoEmEdicao(doacao.id);
-    setFormularioAberto(true);
-  }
-
-  function atualizarStatus(id: number, status: StatusDoacao) {
-    setDoacoes((atuais) =>
-      atuais.map((doacao) =>
-        doacao.id === id ? { ...doacao, status } : doacao,
-      ),
-    );
-  }
+  const {
+    formularioAberto,
+    setFormularioAberto,
+    doacaoEmEdicao,
+    formulario,
+    setFormulario,
+    mesSelecionado,
+    setMesSelecionado,
+    aba,
+    setAba,
+    aprovadas,
+    pendentes,
+    recusadas,
+    exibidas,
+    total,
+    diasComDoacao,
+    salvarDoacao,
+    editarDoacao,
+    atualizarStatus,
+    excluirDoacao,
+  } = useDashboardDoacoesUI();
 
   return (
     <main className="mx-auto flex max-w-[1120px] flex-col gap-6 px-6 py-8 md:px-10">
@@ -483,11 +372,7 @@ export default function DashboardDoacoes() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setDoacoes((atuais) =>
-                          atuais.filter((item) => item.id !== doacao.id),
-                        )
-                      }
+                      onClick={() => excluirDoacao(doacao.id)}
                       className="ml-1 inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-pill px-3 font-body text-[13px] font-bold text-error/70 transition-colors hover:bg-error/10 hover:text-error"
                       aria-label="Excluir doação"
                       title="Excluir"

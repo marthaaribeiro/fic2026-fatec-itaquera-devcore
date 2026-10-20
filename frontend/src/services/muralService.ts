@@ -1,15 +1,5 @@
 // src/services/muralService.ts
-
-export type TipoUsuario = "voluntario" | "colaborador" | "admin";
-
-export interface PostagemMural {
-  id: number;
-  autorNome: string;
-  autorEmail?: string;
-  autorTipo: TipoUsuario;
-  texto: string;
-  criadaEm: string; // ISO date
-}
+import type { PostagemMural, TipoUsuario } from "../types/mural";
 
 const STORAGE_KEY_MURAL = "ong_mural_comunidade";
 

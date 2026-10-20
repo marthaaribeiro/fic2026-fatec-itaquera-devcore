@@ -5,9 +5,8 @@ import {
   obterPostagensMural,
   publicarNoMural,
   removerPostagemMural,
-  type PostagemMural,
-  type TipoUsuario,
 } from "../../services/muralService";
+import type { PostagemMural, TipoUsuario } from "../../types/mural";
 
 interface MuralBoardProps {
   tipoUsuario: TipoUsuario;

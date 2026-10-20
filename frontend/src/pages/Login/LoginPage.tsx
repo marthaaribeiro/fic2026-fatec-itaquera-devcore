@@ -1,42 +1,18 @@
 import { useState } from "react";
-import {
-  verificarStatusUsuario,
-  adicionarSolicitacao,
-  limparSessaoUsuario,
-  obterEConsumirAlertaSeguranca,
-  normalizarTipoUsuario
-} from "../../services/authService";
+import { useAuth } from "../../contexts/authContext";
+import { obterEConsumirAlertaSeguranca } from "../../lib/storage";
+import { autenticarUsuario, cadastrarUsuario } from "../../services/authService";
+import { rotaInicial } from "../../types/auth";
 
 type ViewMode = "login" | "cadastro" | "recuperar";
 type TipoPerfil = "voluntario" | "func";
-
-// Determina a rota conforme o perfil local do usuário
-function obterRotaRedirecionamento(tipo?: string): string {
-  if (!tipo) return "/dashboard/voluntario";
-  const tipoNormalizado = tipo.toLowerCase().trim();
-  if (
-    tipoNormalizado === "adm" ||
-    tipoNormalizado === "admin" ||
-    tipoNormalizado === "administrador"
-  ) {
-    return "/dashboard/admin";
-  }
-  if (
-    tipoNormalizado === "func" ||
-    tipoNormalizado === "colaborador" ||
-    tipoNormalizado === "funcionario"
-  ) {
-    return "/dashboard/colaborador";
-  }
-  return "/dashboard/voluntario";
-}
-
 const INPUT_CLASS =
   "w-full rounded-xl border border-black/15 bg-white px-3 py-2.5 font-body text-sm text-black placeholder:text-ink-soft/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold";
 const LABEL_CLASS =
   "flex flex-col gap-1.5 font-body text-sm font-bold text-black";
 
 export default function LoginPage() {
+  const { entrar } = useAuth();
   const [modo, setModo] = useState<ViewMode>("login");
   const [carregando, setCarregando] = useState(false);
   // FIX: lê o alerta de segurança já na inicialização do state (mesmo padrão
@@ -67,7 +43,7 @@ export default function LoginPage() {
 
   const validarEmail = (valor: string) => /\S+@\S+\.\S+/.test(valor);
 
-  const enviarLogin = (event: React.FormEvent<HTMLFormElement>) => {
+  const enviarLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const emailNormalizado = login.email.trim().toLowerCase();
@@ -85,81 +61,34 @@ export default function LoginPage() {
       return;
     }
 
-    const checagemAcesso = verificarStatusUsuario(emailNormalizado);
-
-    if (checagemAcesso.encontrado && checagemAcesso.status === "pendente") {
-      setMensagem({
-        tipo: "erro",
-        texto:
-          "Sua solicitação de acesso está pendente de aprovação pela administração. Aguarde a validação do seu perfil.",
-      });
-      return;
-    }
-
-    if (checagemAcesso.encontrado && checagemAcesso.status === "recusado") {
-      limparSessaoUsuario();
-      setMensagem({
-        tipo: "erro",
-        texto:
-          "Sua solicitação de acesso foi recusada pela administração. Entre em contato com a ONG para mais informações.",
-      });
-      return;
-    }
-
-    if (!checagemAcesso.encontrado || checagemAcesso.status !== "aceito") {
-      setMensagem({
-        tipo: "erro",
-        texto: "Não há um perfil aprovado localmente para este e-mail.",
-      });
-      return;
-    }
-
     setCarregando(true);
     setMensagem(null);
-    const tipoFinal = normalizarTipoUsuario(checagemAcesso.tipo);
-    const nomeUsuario =
-      checagemAcesso.nome ||
-      (tipoFinal === "admin"
-        ? "Administrador"
-        : tipoFinal === "colaborador"
-          ? "Colaborador"
-          : "Voluntário");
+    try {
+      const resposta = await autenticarUsuario(emailNormalizado, login.senha);
+      entrar(resposta);
 
-    localStorage.setItem("token", `auth_session_${Date.now()}`);
-    localStorage.setItem(
-      "usuario",
-      JSON.stringify({
-        id: checagemAcesso.id ?? Date.now(),
-        tipo: tipoFinal,
-        email: emailNormalizado,
-        nome: nomeUsuario,
-      }),
-    );
-    window.dispatchEvent(new CustomEvent("ong_auth_change"));
-
-    setMensagem({
-      tipo: "sucesso",
-      texto: "Acesso local realizado com sucesso! Redirecionando...",
-    });
-    window.setTimeout(() => {
-      let destino = obterRotaRedirecionamento(tipoFinal);
-      try {
-        // Volta para a página que mandou a pessoa ao login (ex.: /eventos),
-        // mas só para voluntários: admin e colaborador seguem para o painel.
-        const retorno = sessionStorage.getItem("ong_redirect_apos_login");
-        sessionStorage.removeItem("ong_redirect_apos_login");
-        if (retorno && retorno.startsWith("/") && tipoFinal === "voluntario") {
-          destino = retorno;
-        }
-      } catch {
-        // mantém o destino padrão
-      }
-      window.history.pushState({}, "", destino);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    }, 300);
+      setMensagem({
+        tipo: "sucesso",
+        texto: "Acesso realizado com sucesso! Redirecionando...",
+      });
+      window.setTimeout(() => {
+        window.history.pushState({}, "", rotaInicial[resposta.usuario.tipo]);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }, 300);
+    } catch (error) {
+      setMensagem({
+        tipo: "erro",
+        texto:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível conectar ao servidor.",
+      });
+    } finally {
+      setCarregando(false);
+    }
   };
 
-  const enviarCadastro = (event: React.FormEvent<HTMLFormElement>) => {
+  const enviarCadastro = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (
@@ -196,37 +125,48 @@ export default function LoginPage() {
 
     setCarregando(true);
     setMensagem(null);
+    try {
+      const resultado = await cadastrarUsuario({
+        nome: cadastro.nome.trim(),
+        email: cadastro.email.trim().toLowerCase(),
+        senha: cadastro.senha,
+        tipo: cadastro.tipo,
+        aniversario: cadastro.aniversario,
+        tel: cadastro.telefone.trim(),
+        end: cadastro.end.trim(),
+        cep: cadastro.cep.trim(),
+        sobre: cadastro.sobre.trim(),
+      });
 
-    adicionarSolicitacao({
-      nome: cadastro.nome,
-      email: cadastro.email,
-      telefone: cadastro.telefone,
-      tipo: cadastro.tipo,
-      sobre: cadastro.sobre,
-      endereco: cadastro.end,
-      cep: cadastro.cep,
-    });
-
-    setMensagem({
-      tipo: "sucesso",
-      texto:
-        "Solicitação salva neste navegador e pendente de aprovação pela administração.",
-    });
-    setModo("login");
-    setLogin({ email: cadastro.email.trim(), senha: cadastro.senha });
-    setCadastro({
-      nome: "",
-      email: "",
-      senha: "",
-      confirmarSenha: "",
-      telefone: "",
-      end: "",
-      cep: "",
-      tipo: "voluntario",
-      aniversario: "",
-      sobre: "",
-    });
-    setCarregando(false);
+      setMensagem({
+        tipo: "sucesso",
+        texto: resultado.mensagem || "Cadastro realizado. Faça login para entrar.",
+      });
+      setModo("login");
+      setLogin({ email: cadastro.email.trim(), senha: "" });
+      setCadastro({
+        nome: "",
+        email: "",
+        senha: "",
+        confirmarSenha: "",
+        telefone: "",
+        end: "",
+        cep: "",
+        tipo: "voluntario",
+        aniversario: "",
+        sobre: "",
+      });
+    } catch (error) {
+      setMensagem({
+        tipo: "erro",
+        texto:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível conectar ao servidor.",
+      });
+    } finally {
+      setCarregando(false);
+    }
   };
 
   const enviarRecuperacao = async (event: React.FormEvent<HTMLFormElement>) => {

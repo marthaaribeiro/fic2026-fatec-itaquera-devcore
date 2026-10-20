@@ -1,27 +1,11 @@
-import { useEffect, useState } from "react";
-import {
-  obterEventos,
-  buscarEventosApi,
-  type EventoGlobal,
-} from "../../services/eventService";
-import {
-  buscarMedicamentosApi,
-  obterMedicamentosCache,
-  type MedicamentoItem,
-} from "../../services/remedioService";
-import {
-  obterSolicitacoes,
-  type SolicitacaoAcesso,
-} from "../../services/authService";
+import { useDashboardEventos } from "../../hooks/api/useDashboardEventos";
+import { useMedicamentosStorage } from "../../hooks/storage/useMedicamentosStorage";
+import { useDashboardColaboradorUI } from "../../hooks/ui/useDashboardColaboradorUI";
 import { EventCalendar } from "../../components/EventCalendar/EventCalendar";
-import { MessageBox } from "../../components/MessageBox/MessageBox";
-import { MuralBoard } from "../../components/MuralBoard/MuralBoard";
 import { Kicker, Button, FormField } from "../../components";
-import type { UsuarioAutenticado } from "../../types/auth";
-import type { DashboardColaboradorData } from "../../types/dashboard";
-import { VolunteerList } from "../../components/VolunteerList/VolunteerList";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import type { DashboardColaboradorData } from "../../types/dashboard";
 
 const LIMITE_ACOES_VISIVEIS = 3;
 
@@ -86,6 +70,11 @@ function StatCard({
   );
 }
 
+interface DashboardColaboradorProps {
+  dadosIniciais?: DashboardColaboradorData;
+  usuario?: { nome: string; email: string } | null;
+}
+
 function SectionCard({
   id,
   title,
@@ -113,69 +102,25 @@ function SectionCard({
   );
 }
 
-interface DashboardColaboradorProps {
-  dadosIniciais?: DashboardColaboradorData;
-  usuario?: UsuarioAutenticado | null;
-}
+
 
 export default function DashboardColaborador({
   dadosIniciais,
   usuario,
 }: DashboardColaboradorProps) {
-  const [eventosCompartilhados, setEventosCompartilhados] = useState<
-    EventoGlobal[]
-  >([]);
-  const [medicamentos, setMedicamentos] = useState<MedicamentoItem[]>([]);
-  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoAcesso[]>([]);
-  const [acaoInscritosAberta, setAcaoInscritosAberta] = useState<number | null>(
-    null,
-  );
-  const [mostrarTodasAcoes, setMostrarTodasAcoes] = useState(false);
-  const [estoqueAtualizado, setEstoqueAtualizado] = useState(0);
-  const [salvandoEstoque, setSalvandoEstoque] = useState(false);
-
-  useEffect(() => {
-    // 1. Carrega dados de eventos e ações
-    setEventosCompartilhados(obterEventos());
-    buscarEventosApi()
-      .then((evs) => {
-        if (Array.isArray(evs) && evs.length > 0) {
-          setEventosCompartilhados(evs);
-        }
-      })
-      .catch(() => {});
-
-    // 2. Carrega dados de medicamentos do banco de dados
-    setMedicamentos(obterMedicamentosCache());
-    buscarMedicamentosApi()
-      .then((meds) => {
-        if (Array.isArray(meds)) {
-          setMedicamentos(meds);
-        }
-      })
-      .catch(() => {});
-
-    // 3. Carrega solicitações de usuários e voluntários
-    setSolicitacoes(obterSolicitacoes());
-
-    function atualizarTudo() {
-      setEventosCompartilhados(obterEventos());
-      setMedicamentos(obterMedicamentosCache());
-      setSolicitacoes(obterSolicitacoes());
-    }
-
-    window.addEventListener("ong_eventos_atualizados", atualizarTudo);
-    window.addEventListener("ong_medicamentos_atualizados", atualizarTudo);
-    window.addEventListener("ong_solicitacoes_atualizadas", atualizarTudo);
-    window.addEventListener("ong_auth_change", atualizarTudo);
-
-    return () => {
-      window.removeEventListener("ong_eventos_atualizados", atualizarTudo);
-      window.removeEventListener("ong_medicamentos_atualizados", atualizarTudo);
-      window.removeEventListener("ong_solicitacoes_atualizadas", atualizarTudo);
-      window.removeEventListener("ong_auth_change", atualizarTudo);
-    };
-  }, []);
+  const { eventos: eventosCompartilhados, erroAgenda } = useDashboardEventos();
+  const { medicamentos } = useMedicamentosStorage({
+    loadFromApi: true,
+    listenToAuthChange: true,
+  });
+  const {
+    mostrarTodasAcoes,
+    setMostrarTodasAcoes,
+    estoqueAtualizado,
+    setEstoqueAtualizado,
+    salvandoEstoque,
+    atualizarEstoque,
+  } = useDashboardColaboradorUI();
 
   const totalMedicamentosEstoque = medicamentos.reduce(
     (acc, m) => acc + m.quantidade,
@@ -200,19 +145,6 @@ export default function DashboardColaborador({
     (m) => m.quantidade > 0 && m.quantidade < 10,
   ).length;
 
-  const totalVoluntariosAtivos = solicitacoes.filter(
-    (s) => s.tipo === "voluntario" && s.status === "aceito",
-  ).length;
-
-  const totalVoluntariosPendentes = solicitacoes.filter(
-    (s) => s.tipo === "voluntario" && s.status === "pendente",
-  ).length;
-
-  const totalInscricoesProximasAcoes = eventosCompartilhados.reduce(
-    (acc, ev) =>
-      acc + (ev.inscritosDetalhes?.length || ev.voluntariosInscritos || 0),
-    0,
-  );
   const acoesExibidas = mostrarTodasAcoes
     ? eventosCompartilhados
     : eventosCompartilhados.slice(0, LIMITE_ACOES_VISIVEIS);
@@ -225,12 +157,6 @@ export default function DashboardColaborador({
     evento.preventDefault();
     window.history.pushState({}, "", "/dashboard/doacoes");
     window.dispatchEvent(new PopStateEvent("popstate"));
-  }
-
-  function atualizarEstoque(evento: React.FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    setSalvandoEstoque(true);
-    window.setTimeout(() => setSalvandoEstoque(false), 400);
   }
 
   return (
@@ -310,13 +236,19 @@ export default function DashboardColaborador({
             </span>
           </header>
 
+          {erroAgenda && (
+            <p role="alert" className="m-0 font-body text-sm text-error">
+              {erroAgenda}
+            </p>
+          )}
+
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(230px,0.8fr)_minmax(0,1.2fr)]">
             <EventCalendar
               events={eventosCompartilhados.map((acao) => ({
                 id: acao.id,
                 title: acao.titulo,
                 date: acao.data,
-                meta: `${acao.local || "Campinas"} · ${acao.vagas || 6} vagas`,
+                meta: acao.local || "Campinas",
               }))}
             />
 
@@ -328,7 +260,6 @@ export default function DashboardColaborador({
               )}
               {acoesExibidas.map((acao) => {
                 const { dia, mes } = formatarData(acao.data);
-                const inscritos = acao.inscritosDetalhes?.length || acao.voluntariosInscritos || 0;
                 return (
                   <article
                     key={acao.id}
@@ -347,28 +278,8 @@ export default function DashboardColaborador({
                         {acao.titulo}
                       </h3>
                       <p className="m-0 font-body text-xs text-ink-soft">
-                        {acao.local || "Campinas"} · {acao.vagas || 6} vagas
+                        {acao.local || "Campinas"}
                       </p>
-                      <span className="font-body text-xs text-ink-soft">
-                        {inscritos} {inscritos === 1 ? "voluntário inscrito" : "voluntários inscritos"}
-                      </span>
-                    </div>
-                    <div className="w-full">
-                      <VolunteerList
-                        inscritos={acao.inscritosDetalhes || []}
-                        vagas={acao.vagas || 6}
-                        aberto={
-                          acaoInscritosAberta !== null &&
-                          String(acaoInscritosAberta) === String(acao.id)
-                        }
-                        onToggle={() =>
-                          setAcaoInscritosAberta((atual) =>
-                            String(atual) === String(acao.id) ? null : acao.id,
-                          )
-                        }
-                        somenteLeitura={true}
-                        onRemover={() => {}}
-                      />
                     </div>
                   </article>
                 );
@@ -435,45 +346,6 @@ export default function DashboardColaborador({
         </SectionCard>
       </div>
 
-      <SectionCard id="secao-voluntarios" title="Voluntários">
-        <div className="grid grid-cols-1 divide-y divide-black/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="flex min-h-16 items-center justify-between gap-3 px-3 py-3 sm:px-5">
-            <span className="font-body text-sm text-ink-soft">Ativos</span>
-            <strong className="font-display text-xl font-semibold text-black">
-              {totalVoluntariosAtivos}
-            </strong>
-          </div>
-          <div className="flex min-h-16 items-center justify-between gap-3 px-3 py-3 sm:px-5">
-            <span className="font-body text-sm text-ink-soft">
-              Aguardando confirmação
-            </span>
-            <strong className="font-display text-xl font-semibold text-black">
-              {totalVoluntariosPendentes}
-            </strong>
-          </div>
-          <div className="flex min-h-16 items-center justify-between gap-3 px-3 py-3 sm:px-5">
-            <span className="font-body text-sm text-ink-soft">
-              Inscrições nas próximas ações
-            </span>
-            <strong className="font-display text-xl font-semibold text-black">
-              {totalInscricoesProximasAcoes}
-            </strong>
-          </div>
-        </div>
-      </SectionCard>
-
-      <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-2">
-        <MessageBox
-          author="colaborador"
-          usuarioNome={usuario?.nome || "Colaborador(a)"}
-          usuarioEmail={usuario?.email || "colaborador@saudecampinas.org"}
-        />
-        <MuralBoard
-          tipoUsuario="colaborador"
-          usuarioNome={usuario?.nome || "Colaborador(a)"}
-          usuarioEmail={usuario?.email || "colaborador@saudecampinas.org"}
-        />
-      </div>
     </div>
   );
 }

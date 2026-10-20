@@ -3,23 +3,12 @@ import "./eventos.css";
 import { Header } from "../../components/Header/Header";
 import { Footer } from "../../components/Footer/Footer";
 import { Kicker } from "../../components/Kicker/Kicker";
-import { Button } from "../../components/Button/Button";
 import { EventCard } from "../../components/EventCard/EventCard";
-import { EventModal } from "../../components/EventModal/EventModal";
 import {
-  obterEventos,
-  type EventoGlobal,
-} from "../../services/eventService";
+  buscarEventosApi,
+} from "../../services/eventApiService";
+import type { EventoGlobal } from "../../types/event";
 import heroPlaceholder from "../../assets/hero.png";
-
-type Categoria = "Mutirão" | "Campanha" | "Capacitação" | string;
-
-const FILTROS: Array<"Todos" | Categoria> = [
-  "Todos",
-  "Mutirão",
-  "Campanha",
-  "Capacitação",
-];
 
 const MESES = [
   "JANEIRO",
@@ -48,41 +37,38 @@ function formatMesAno(iso: string) {
 }
 
 function Eventos() {
-  const [filtro, setFiltro] = useState<"Todos" | Categoria>("Todos");
   const [eventos, setEventos] = useState<EventoGlobal[]>([]);
-  const [eventoAbertoId, setEventoAbertoId] = useState<number | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    setEventos(obterEventos());
-
-    function recarregarEventos() {
-      setEventos(obterEventos());
-    }
-    window.addEventListener("ong_eventos_atualizados", recarregarEventos);
+    let ativo = true;
+    buscarEventosApi()
+      .then((dados) => {
+        if (ativo) setEventos(dados);
+      })
+      .catch((error: unknown) => {
+        if (ativo) {
+          setErro(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível carregar os eventos.",
+          );
+        }
+      });
     return () => {
-      window.removeEventListener("ong_eventos_atualizados", recarregarEventos);
+      ativo = false;
     };
   }, []);
 
-  const eventosFiltrados = useMemo(
-    () =>
-      filtro === "Todos"
-        ? eventos
-        : eventos.filter((evento) => (evento.category || "Mutirão") === filtro),
-    [filtro, eventos],
-  );
-
-  const eventoAberto = eventos.find((e) => e.id === eventoAbertoId) ?? null;
-
   const grupos = useMemo(() => {
     const mapa = new Map<string, EventoGlobal[]>();
-    for (const evento of eventosFiltrados) {
+    for (const evento of eventos) {
       const chave = formatMesAno(evento.data);
       if (!mapa.has(chave)) mapa.set(chave, []);
       mapa.get(chave)!.push(evento);
     }
     return Array.from(mapa.entries());
-  }, [eventosFiltrados]);
+  }, [eventos]);
 
   return (
     <>
@@ -92,7 +78,7 @@ function Eventos() {
           { label: "Sobre", href: "/sobre" },
           { label: "Como ajudar", href: "/doacao" },
           { label: "Eventos", href: "/eventos" },
-          { label: "Área do voluntário", href: "/login" },
+          { label: "Área do voluntário", href: "/voluntario" },
           { label: "Contato", href: "/contato" },
         ]}
       />
@@ -106,23 +92,11 @@ function Eventos() {
           <Kicker color="amber">Agenda completa</Kicker>
           <h1 className="eventos__title">Todas as próximas ações.</h1>
           <p className="eventos__lead">
-            Cada ação aqui embaixo é uma chance de ajudar de perto. Confira as
-            datas, os locais e escolha onde encaixar sua agenda.
+            Consulte as datas, os locais e as informações cadastradas pela equipe.
           </p>
         </section>
 
-        <div className="eventos__filters">
-          {FILTROS.map((label) => (
-            <Button
-              key={label}
-              variant={filtro === label ? "dark" : "outline"}
-              onClick={() => setFiltro(label)}
-              className="px-4 py-2 text-[13px]"
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+        {erro && <p role="alert" className="eventos__vazio">{erro}</p>}
 
         {grupos.map(([mesAno, eventosDoMes]) => (
           <section key={mesAno} className="eventos__grupo">
@@ -132,7 +106,6 @@ function Eventos() {
                 <EventCard
                   key={evento.id}
                   date={formatDay(evento.data)}
-                  category={evento.category || "Mutirão"}
                   place={evento.local || "Campinas"}
                   title={evento.titulo}
                   description={
@@ -140,10 +113,8 @@ function Eventos() {
                     evento.comentarios ||
                     "Ação do Projeto Saúde Campinas."
                   }
-                  photoUrl={evento.photoUrl || heroPlaceholder}
-                  photoAlt={evento.photoAlt || evento.titulo}
-                  ctaLabel="Ver detalhes e participar"
-                  onCtaClick={() => setEventoAbertoId(evento.id)}
+                  photoUrl={heroPlaceholder}
+                  photoAlt={evento.titulo}
                 />
               ))}
             </div>
@@ -152,25 +123,17 @@ function Eventos() {
 
         {grupos.length === 0 && (
           <p className="eventos__vazio">
-            Nenhuma ação encontrada para esse filtro no momento.
+            Nenhum evento cadastrado no momento.
           </p>
         )}
       </main>
-
-      {eventoAberto && (
-        <EventModal
-          evento={eventoAberto}
-          fotoPadrao={heroPlaceholder}
-          onClose={() => setEventoAbertoId(null)}
-        />
-      )}
 
       <Footer
         navLinks={[
           { label: "Sobre", href: "/sobre" },
           { label: "Como ajudar", href: "/doacao" },
           { label: "Eventos", href: "/eventos" },
-          { label: "Área do voluntário", href: "/login" },
+          { label: "Área do voluntário", href: "/voluntario" },
           { label: "Contato", href: "/contato" },
         ]}
         email="contato@saudecampinas.org"
