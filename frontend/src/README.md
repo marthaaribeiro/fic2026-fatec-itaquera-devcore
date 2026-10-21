@@ -50,9 +50,9 @@ A aplicação abre em `http://localhost:5173`.
 
 | Variável | Descrição | Local | Produção |
 |---|---|---|---|
-| `VITE_API_URL` | Endereço base da API | `/api` | `https://[URL-DA-API]/api` |
+| `VITE_API_URL` | Endereço base da API | `http://localhost:3000` (padrão) | URL pública da API, sem acrescentar `/api` |
 
-- No ambiente local, o valor `/api` funciona junto com o **proxy do Vite** (ver [Comunicação com a API](#comunicação-com-a-api)).
+- A URL deve apontar para a raiz onde a API expõe suas rotas, como `/login` e `/cadastro`.
 - Variáveis com prefixo `VITE_` ficam visíveis no código enviado ao navegador. **Nunca** coloque segredos (senhas, chaves) aqui.
 - Depois de mudar o `.env`, reinicie o `npm run dev`.
 
@@ -140,19 +140,13 @@ As rotas restritas usam o componente `RotaProtegida`. Quem não está logado vai
 - Os dados são buscados e atualizados com **React Query** (`useQuery` para leitura, `useMutation` para escrita). Depois de uma alteração, as listas afetadas são recarregadas com `invalidateQueries`.
 - Os erros da API chegam no formato `{ mensagem, codigo?, erros? }` e são exibidos ao usuário. A função `lerErro()` de `lib/api.ts` faz essa leitura.
 
-**Proxy em desenvolvimento.** O `vite.config.ts` redireciona `/api` para a API local, evitando problemas de CORS:
-
-```ts
-server: {
-  proxy: { '/api': 'http://localhost:3000' },
-},
-```
+O Vite não configura proxy para a API. Em desenvolvimento, o front chama diretamente `http://localhost:3000`; o back-end precisa permitir a origem `http://localhost:5173`. As rotas atuais do back-end não usam o prefixo `/api`.
 
 ## Autenticação no front
 
-1. **Cadastro:** formulário único, onde a pessoa escolhe **Colaborador** ou **Voluntário**. Após o envio, é exibida a mensagem de que o cadastro aguarda aprovação. Não há login automático.
-2. **Login:** se o cadastro ainda estiver pendente ou tiver sido rejeitado, a tela mostra a mensagem correspondente (códigos `CADASTRO_PENDENTE` e `CADASTRO_REJEITADO` da API).
-3. **Sessão:** o token fica no `sessionStorage` e expira em 8 horas. Os dados do usuário (nome, perfil) vêm sempre de `GET /api/auth/me`, nunca de informações salvas no navegador.
+1. **Cadastro:** o formulário oferece **Colaborador** ou **Voluntário** e envia os dados para `POST /cadastro`. A interface não oferece cadastro de administrador, mas essa restrição precisa ser aplicada também pelo back-end; controles do navegador podem ser alterados. Não há login automático.
+2. **Login:** envia e-mail e senha para `POST /login` e exibe a mensagem retornada pela API em caso de falha.
+3. **Sessão:** o token e os dados básicos para exibição ficam no `sessionStorage`. O back-end atual não oferece `GET /auth/me`; portanto, os dados guardados no navegador são usados para restaurar a interface após recarregar a página, não para autorizar operações. As rotas da API devem validar o token e o papel no servidor.
 4. **Aprovação:** no painel do administrador, a lista de solicitações pendentes permite aprovar ou rejeitar cada cadastro, com motivo opcional na rejeição.
 
 ## Estilização e responsividade
@@ -185,7 +179,7 @@ npm run preview    # confere o build localmente
 - **Diretório raiz do projeto na plataforma:** `frontend`
 - **Comando de build:** `npm run build`
 - **Pasta publicada:** `dist`
-- **Variável de ambiente:** `VITE_API_URL` com a URL pública da API, terminando em `/api`.
+- **Variável de ambiente:** `VITE_API_URL` com a URL pública da API, apontando para a raiz das rotas expostas.
 
 Como a navegação usa react-router-dom, a plataforma precisa redirecionar todas as rotas para o `index.html`. Sem isso, atualizar a página em `/dashboard/admin` resulta em 404.
 
@@ -194,8 +188,8 @@ Como a navegação usa react-router-dom, a plataforma precisa redirecionar todas
 | Sintoma | Causa provável | Solução |
 |---|---|---|
 | "Não foi possível conectar ao servidor" / `Failed to fetch` | A API não está rodando | Suba a API (`npm run dev` em `backend/`) |
-| "blocked by CORS policy" | O front não está usando o proxy ou a URL do front não está liberada na API | Use `VITE_API_URL=/api` localmente; em produção, inclua a URL do front em `CORS_ORIGINS` da API |
-| Erro 404 nas chamadas | `VITE_API_URL` sem o `/api` ou rota com nome diferente | Confira a variável e a tabela de rotas do back-end |
+| "blocked by CORS policy" | A origem do front não está liberada na API | Peça à equipe do back-end para permitir a origem do front; localmente, use `http://localhost:5173` |
+| Erro 404 nas chamadas | A base URL ou o caminho não corresponde às rotas expostas pela API | Confira `VITE_API_URL` e use os caminhos disponíveis no back-end, sem presumir o prefixo `/api` |
 | Volta para o login sozinho | Token expirado ou usuário desativado/rejeitado | Faça login novamente; se persistir, fale com a administração |
 | 404 ao atualizar a página em produção | Falta o redirecionamento para o `index.html` | Veja [Build e deploy](#build-e-deploy) |
 | Variável do `.env` não muda nada | O Vite só lê o `.env` ao iniciar | Reinicie o `npm run dev` |
