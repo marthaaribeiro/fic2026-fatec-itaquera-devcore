@@ -1,6 +1,6 @@
 // src/components/MuralBoard/MuralBoard.tsx
 import { useState, useEffect, type FormEvent } from "react";
-import { Crown, Handshake, Sprout, User, Trash2 } from "lucide-react";
+import { Crown, Handshake, Megaphone, Sprout, Trash2, User } from "lucide-react";
 import {
   obterPostagensMural,
   publicarNoMural,
@@ -19,12 +19,12 @@ export function MuralBoard({
   usuarioNome = "Membro da ONG",
   usuarioEmail = "",
 }: MuralBoardProps) {
-  const [postagens, setPostagens] = useState<PostagemMural[]>([]);
+  const [postagens, setPostagens] = useState<PostagemMural[]>(() =>
+    obterPostagensMural(),
+  );
   const [texto, setTexto] = useState("");
 
   useEffect(() => {
-    setPostagens(obterPostagensMural());
-
     function atualizarMuralAoVivo() {
       setPostagens(obterPostagensMural());
     }
@@ -98,24 +98,25 @@ export function MuralBoard({
 
   return (
     <section
-      aria-labelledby="mural-comunitario-titulo"
+      aria-labelledby="avisos-equipe-titulo"
       className="flex flex-col gap-4 rounded-xl border border-black/10 bg-white p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="m-0 font-body text-xs font-bold uppercase tracking-wide text-gold">
-            Comunidade & Relatos
+            Comunicados da organização
           </p>
           <h2
-            id="mural-comunitario-titulo"
-            className="m-0 font-display text-[1.1rem] font-semibold text-black"
+            id="avisos-equipe-titulo"
+            className="m-0 flex items-center gap-2 font-display text-[1.1rem] font-semibold text-black"
           >
-            Mural da Equipe
+            <Megaphone size={18} aria-hidden="true" />
+            Avisos da equipe
           </h2>
         </div>
         <span className="rounded-pill border border-gold bg-gold/10 px-3 py-1 font-body text-xs font-bold text-gold">
           {postagens.length}{" "}
-          {postagens.length === 1 ? "publicação" : "publicações"}
+          {postagens.length === 1 ? "aviso" : "avisos"}
         </span>
       </div>
 
@@ -137,8 +138,8 @@ export function MuralBoard({
 
       <form onSubmit={handlePublicar} className="flex flex-col gap-3">
         <textarea
-          aria-label="Mensagem para o mural"
-          placeholder="Compartilhe um aviso, relato de atendimento ou experiência com a equipe..."
+          aria-label="Novo aviso para a equipe"
+          placeholder="Escreva um aviso importante para a equipe..."
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           required
@@ -151,7 +152,7 @@ export function MuralBoard({
             disabled={!texto.trim()}
             className="inline-flex items-center rounded-pill bg-black px-5 py-3 font-body text-[13px] font-bold text-parchment transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Publicar no mural
+            Publicar aviso
           </button>
         </div>
       </form>
@@ -159,7 +160,7 @@ export function MuralBoard({
       <div className="flex flex-col gap-3">
         {postagens.length === 0 ? (
           <p className="m-0 rounded-md border border-dashed border-black/15 px-4 py-6 text-center font-body text-sm text-ink-soft">
-            Nenhuma publicação no mural ainda. Seja o primeiro a compartilhar!
+            Nenhum aviso publicado ainda.
           </p>
         ) : (
           postagens.map((post) => {
