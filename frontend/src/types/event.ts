@@ -5,6 +5,11 @@ export interface EventoGlobal {
   comentarios: string;
   description: string;
   local: string;
+  photoUrl?: string;
+  photoAlt?: string;
+  category?: string;
+  vagas?: number;
+  voluntariosInscritos?: number;
 }
 
 export interface EventoServidor {
