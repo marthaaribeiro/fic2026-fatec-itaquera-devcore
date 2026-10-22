@@ -5,7 +5,7 @@ import { autenticarUsuario, cadastrarUsuario } from "../../services/authService"
 import { rotaInicial } from "../../types/auth";
 
 type ViewMode = "login" | "cadastro" | "recuperar";
-type TipoPerfil = "voluntario" | "func";
+type TipoPerfil = "voluntario" | "funcionário";
 const INPUT_CLASS =
   "w-full rounded-xl border border-black/15 bg-white px-3 py-2.5 font-body text-sm text-black placeholder:text-ink-soft/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold";
 const LABEL_CLASS =
@@ -15,9 +15,6 @@ export default function LoginPage() {
   const { entrar } = useAuth();
   const [modo, setModo] = useState<ViewMode>("login");
   const [carregando, setCarregando] = useState(false);
-  // FIX: lê o alerta de segurança já na inicialização do state (mesmo padrão
-  // usado em AppRoutes.tsx), em vez de um useEffect que chama setState
-  // sincronamente logo após a montagem.
   const [mensagem, setMensagem] = useState<{
     tipo: "sucesso" | "erro" | "info";
     texto: string;
@@ -136,6 +133,7 @@ export default function LoginPage() {
         end: cadastro.end.trim(),
         cep: cadastro.cep.trim(),
         sobre: cadastro.sobre.trim(),
+        cargo: cadastro.tipo === "funcionário" ? "Equipe de Apoio" : undefined,
       });
 
       setMensagem({
@@ -368,7 +366,7 @@ export default function LoginPage() {
                   className={INPUT_CLASS}
                 >
                   <option value="voluntario">Voluntário(a)</option>
-                  <option value="func">Colaborador(a) / Funcionário(a)</option>
+                  <option value="funcionário">Colaborador(a) / Funcionário(a)</option>
                 </select>
               </label>
 

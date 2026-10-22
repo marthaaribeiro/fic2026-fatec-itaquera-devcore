@@ -1,4 +1,4 @@
-import { HeartHandshake, Users, Stethoscope, ImageIcon } from "lucide-react";
+import { HeartHandshake, Users, Stethoscope } from "lucide-react";
 import "./sobre.css";
 import { Header } from "../../components/Header/Header";
 import { Footer } from "../../components/Footer/Footer";
@@ -35,22 +35,12 @@ const VALORES = [
   },
 ];
 
-/** Placeholders de foto — trocar cada `PhotoSlot` por uma <img> quando as fotos reais chegarem. */
-  const GALERIA = [
+const GALERIA = [
   { url: "/sobre/foto-sobre4.jpeg", alt: "Atendimento de rua" },
   { url: "/sobre/foto-sobre5.jpeg", alt: "Kits de higiene e doação" },
   { url: "/sobre/foto-sobre6.jpeg", alt: "Equipe em ação" },
   { url: "/sobre/foto-sobre7.jpeg", alt: "Mutirão de voluntários" },
 ];
-
-function PhotoSlot({ label, className = "" }: { label: string; className?: string }) {
-  return (
-    <div className={`sobre__photo-slot ${className}`}>
-      <ImageIcon size={28} strokeWidth={1.5} />
-      <span>{label}</span>
-    </div>
-  );
-}
 
 function Sobre() {
   return (

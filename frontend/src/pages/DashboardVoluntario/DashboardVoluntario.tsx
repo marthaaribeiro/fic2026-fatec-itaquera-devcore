@@ -2,16 +2,20 @@ import { EventCalendar } from "../../components/EventCalendar/EventCalendar";
 import { useDashboardEventos } from "../../hooks/api/useDashboardEventos";
 import { useDashboardVoluntarioUI } from "../../hooks/ui/useDashboardVoluntarioUI";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
+import { MuralBoard } from "../../components/MuralBoard/MuralBoard";
+import { useAuth } from "../../contexts/authContext";
 import { X } from "lucide-react";
 
 export default function DashboardVoluntario({
-  nome = "Voluntário",
+  nome,
 }: {
   nome?: string;
 }) {
+  const { usuario } = useAuth();
   const { eventos, erroAgenda } = useDashboardEventos();
   const { perfil, setPerfil, editando, setEditando, salvarPerfil } =
     useDashboardVoluntarioUI();
+  const nomeVoluntario = nome || usuario?.nome || "Voluntário";
 
   return (
     <main className="mx-auto flex max-w-[1120px] flex-col gap-6 px-6 py-8 md:px-10">
@@ -21,7 +25,7 @@ export default function DashboardVoluntario({
             Área do voluntário
           </p>
           <h1 className="m-0 font-display text-[26px] font-semibold text-black md:text-[32px]">
-            Olá, {nome.split(" ")[0]}.
+            Olá, {nomeVoluntario.split(" ")[0]}.
           </h1>
           <p className="m-0 font-body text-sm text-ink-soft">
             Consulte a agenda de ações cadastradas pela equipe.
@@ -29,6 +33,12 @@ export default function DashboardVoluntario({
         </div>
         <LogoutButton />
       </header>
+
+      <MuralBoard
+        tipoUsuario="voluntario"
+        usuarioNome={nomeVoluntario}
+        usuarioEmail={usuario?.email}
+      />
 
       <section className="flex flex-col gap-6 rounded-2xl border border-black/10 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

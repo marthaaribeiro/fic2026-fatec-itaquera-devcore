@@ -2,8 +2,9 @@ import { useDashboardEventos } from "../../hooks/api/useDashboardEventos";
 import { useMedicamentosStorage } from "../../hooks/storage/useMedicamentosStorage";
 import { useDashboardColaboradorUI } from "../../hooks/ui/useDashboardColaboradorUI";
 import { EventCalendar } from "../../components/EventCalendar/EventCalendar";
-import { Kicker, Button, FormField } from "../../components";
+import { Kicker, Button, FormField, MuralBoard } from "../../components";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
+import { useAuth } from "../../contexts/authContext";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { DashboardColaboradorData } from "../../types/dashboard";
 
@@ -108,6 +109,7 @@ export default function DashboardColaborador({
   dadosIniciais,
   usuario,
 }: DashboardColaboradorProps) {
+  const { usuario: usuarioAutenticado } = useAuth();
   const { eventos: eventosCompartilhados, erroAgenda } = useDashboardEventos();
   const { medicamentos } = useMedicamentosStorage({
     loadFromApi: true,
@@ -151,7 +153,9 @@ export default function DashboardColaborador({
 
   const doacoesValor = dadosIniciais?.doacoes.valorTotalMes ?? 4230.5;
   const doacoesQuantidade = dadosIniciais?.doacoes.quantidadeMes ?? 27;
-  const nomeColaborador = usuario?.nome || "Colaborador(a)";
+  const nomeColaborador =
+    usuario?.nome || usuarioAutenticado?.nome || "Colaborador(a)";
+  const emailColaborador = usuario?.email || usuarioAutenticado?.email || "";
 
   function abrirDoacoes(evento: React.MouseEvent<HTMLAnchorElement>) {
     evento.preventDefault();
@@ -170,6 +174,12 @@ export default function DashboardColaborador({
         </div>
         <LogoutButton />
       </header>
+
+      <MuralBoard
+        tipoUsuario="colaborador"
+        usuarioNome={nomeColaborador}
+        usuarioEmail={emailColaborador}
+      />
 
       <SectionCard id="secao-estoque" title="Estoque de medicamentos">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

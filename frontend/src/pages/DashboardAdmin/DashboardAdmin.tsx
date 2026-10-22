@@ -1,6 +1,8 @@
 import type { FormEvent } from "react";
 import { EventCalendar } from "../../components/EventCalendar/EventCalendar";
 import { LogoutButton } from "../../components/LogoutButton/LogoutButton";
+import { MuralBoard } from "../../components/MuralBoard/MuralBoard";
+import { useAuth } from "../../contexts/authContext";
 import { useDashboardEventos } from "../../hooks/api/useDashboardEventos";
 import { useMedicamentosStorage } from "../../hooks/storage/useMedicamentosStorage";
 import { useDashboardAdminUI } from "../../hooks/ui/useDashboardAdminUI";
@@ -23,6 +25,7 @@ function navegarPara(caminho: string) {
 }
 
 export default function DashboardAdmin() {
+  const { usuario } = useAuth();
   const {
     eventos,
     erroAgenda,
@@ -82,6 +85,12 @@ export default function DashboardAdmin() {
         </div>
         <LogoutButton />
       </header>
+
+      <MuralBoard
+        tipoUsuario="admin"
+        usuarioNome={usuario?.nome || "Administração"}
+        usuarioEmail={usuario?.email}
+      />
 
       <section
         aria-label="Resumos da organização"

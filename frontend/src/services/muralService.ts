@@ -9,7 +9,7 @@ export const POSTAGENS_INICIAIS: PostagemMural[] = [
     autorNome: "Coordenação Geral",
     autorEmail: "admin@saudecampinas.org",
     autorTipo: "admin",
-    texto: "Bem-vindos ao mural comunitário do Projeto Social Saúde Campinas! Este espaço é aberto para recados, alinhamentos e depoimentos sobre nossas ações nas ruas.",
+    texto: "Bem-vindos ao canal de avisos do Projeto Social Saúde Campinas. Consulte este espaço para comunicados importantes da equipe.",
     criadaEm: "2026-08-27T10:00:00.000Z",
   },
   {
@@ -17,7 +17,7 @@ export const POSTAGENS_INICIAIS: PostagemMural[] = [
     autorNome: "Carlos Eduardo Lima",
     autorEmail: "carlos.colab@saudecampinas.org",
     autorTipo: "colaborador",
-    texto: "Atenção equipe: a organização dos kits de higiene e aferição para o próximo mutirão na Vila Industrial está pronta. Quem tiver dúvidas, me mande mensagem!",
+    texto: "Aviso à equipe: os kits de higiene e aferição para o próximo mutirão na Vila Industrial estão organizados.",
     criadaEm: "2026-08-28T14:30:00.000Z",
   },
   {
@@ -25,7 +25,7 @@ export const POSTAGENS_INICIAIS: PostagemMural[] = [
     autorNome: "Mariana Souza",
     autorEmail: "mariana.vol@gmail.com",
     autorTipo: "voluntario",
-    texto: "O acolhimento da última ação foi muito especial! Muito bom ver a união de toda a equipe no atendimento às famílias.",
+    texto: "Lembrete: confirme com a coordenação os horários e orientações antes de cada ação.",
     criadaEm: "2026-08-29T18:15:00.000Z",
   },
 ];

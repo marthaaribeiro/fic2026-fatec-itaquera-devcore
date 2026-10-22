@@ -1,19 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { Button } from "../Button/Button";
 import { DatePill } from "../DatePill/DatePill";
-import {
-  obterSessaoUsuario,
-  obterSolicitacoes,
-  type SessaoUsuario,
-} from "../../services/authService";
-import {
-  alternarInscricaoVoluntario,
-  obterInscricoesVoluntario,
-  type EventoGlobal,
-} from "../../services/eventApiService";
-
-export const CHAVE_REDIRECT_APOS_LOGIN = "ong_redirect_apos_login";
+import { obterSessaoUsuario } from "../../lib/storage";
+import type { EventoGlobal } from "../../types/event";
+import type { SessaoUsuario } from "../../types/auth";
 
 export interface EventModalProps {
   evento: EventoGlobal;
@@ -27,17 +17,10 @@ function formatarData(iso: string) {
   return `${dia}/${mes}/${ano}`;
 }
 
-/**
- * Janela com os detalhes do evento. A inscrição exige usuário logado:
- * sem sessão, o modal leva ao login e, depois dele, a pessoa volta para
- * /eventos. Só voluntários se inscrevem (RF17).
- */
 export function EventModal({ evento, fotoPadrao, onClose }: EventModalProps) {
   const [sessao, setSessao] = useState<SessaoUsuario | null>(() =>
     obterSessaoUsuario(),
   );
-  const [inscrito, setInscrito] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
   const botaoFecharRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -45,18 +28,6 @@ export function EventModal({ evento, fotoPadrao, onClose }: EventModalProps) {
     window.addEventListener("ong_auth_change", atualizarSessao);
     return () => window.removeEventListener("ong_auth_change", atualizarSessao);
   }, []);
-
-  useEffect(() => {
-    if (sessao?.tipo === "voluntario") {
-      setInscrito(
-        obterInscricoesVoluntario(sessao.email || sessao.id).includes(
-          evento.id,
-        ),
-      );
-    } else {
-      setInscrito(false);
-    }
-  }, [sessao, evento.id]);
 
   useEffect(() => {
     botaoFecharRef.current?.focus();
@@ -71,41 +42,6 @@ export function EventModal({ evento, fotoPadrao, onClose }: EventModalProps) {
       document.body.style.overflow = overflowAnterior;
     };
   }, [onClose]);
-
-  const vagasEsgotadas =
-    typeof evento.vagas === "number" &&
-    evento.vagas > 0 &&
-    (evento.voluntariosInscritos ?? 0) >= evento.vagas &&
-    !inscrito;
-
-  function irParaLogin() {
-    try {
-      sessionStorage.setItem(CHAVE_REDIRECT_APOS_LOGIN, "/eventos");
-    } catch {
-      // sem sessionStorage a pessoa só cai na área dela depois do login
-    }
-    window.location.href = "/login";
-  }
-
-  function alternarInscricao() {
-    if (!sessao) return;
-    const cadastro = obterSolicitacoes().find(
-      (s) => s.email.toLowerCase().trim() === sessao.email.toLowerCase().trim(),
-    );
-    const resultado = alternarInscricaoVoluntario(evento.id, {
-      id: sessao.id,
-      nome: sessao.nome,
-      email: sessao.email,
-      telefone: cadastro?.telefone,
-      sobre: cadastro?.sobre,
-    });
-    setInscrito(resultado.estaInscrito);
-    setFeedback(
-      resultado.estaInscrito
-        ? "Inscrição confirmada! Obrigado por ajudar."
-        : "Inscrição cancelada.",
-    );
-  }
 
   return (
     <div
@@ -164,45 +100,12 @@ export function EventModal({ evento, fotoPadrao, onClose }: EventModalProps) {
           </p>
 
           <div className="mt-2 flex flex-col gap-3 border-t border-black/10 pt-4">
-            {!sessao && (
-              <>
-                <p className="m-0 font-body text-sm text-black">
-                  Para se inscrever neste evento você precisa estar logado.
-                </p>
-                <Button variant="dark" fullWidth onClick={irParaLogin}>
-                  Entrar ou cadastrar para se inscrever
-                </Button>
-              </>
-            )}
-
-            {sessao?.tipo === "voluntario" && (
-              <>
-                <Button
-                  variant={inscrito ? "outline" : "dark"}
-                  fullWidth
-                  disabled={vagasEsgotadas}
-                  onClick={alternarInscricao}
-                >
-                  {inscrito
-                    ? "Cancelar minha inscrição"
-                    : vagasEsgotadas
-                      ? "Vagas esgotadas"
-                      : "Quero me inscrever"}
-                </Button>
-                {feedback && (
-                  <p role="status" className="m-0 font-body text-sm text-black">
-                    {feedback}
-                  </p>
-                )}
-              </>
-            )}
-
-            {sessao && sessao.tipo !== "voluntario" && (
-              <p className="m-0 font-body text-sm text-ink-soft">
-                A inscrição em eventos é feita pelos voluntários. Você pode
-                acompanhar os inscritos no seu painel.
-              </p>
-            )}
+            <p role="status" className="m-0 font-body text-sm text-ink-soft">
+              As inscrições para este evento ainda não estão disponíveis.
+              {sessao?.tipo === "voluntario"
+                ? " A equipe habilitará essa opção quando a integração de inscrições estiver pronta."
+                : ""}
+            </p>
           </div>
         </div>
       </div>

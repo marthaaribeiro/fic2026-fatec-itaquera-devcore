@@ -1,44 +1,18 @@
+// src/services/authService.ts
 import { normalizarTipoUsuario } from "../lib/auth";
-import { api } from "../lib/api";
-import type { LoginResposta, TipoUsuario, Usuario } from "../types/auth";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-
-interface RespostaLoginServidor {
-  token?: unknown;
-  mensagem?: string;
-  message?: string;
-}
+import { api, lerErro } from "../lib/api";
+import { obterSessaoUsuario } from "../lib/storage";
+import type { 
+  CadastroDados, 
+  LoginRespostasFrontend, 
+  LoginRespostasServidor, 
+  TipoUsuario, 
+  Usuario 
+} from "../types/auth";
 
 interface PayloadToken {
-  id?: number;
-  tipo?: string;
-}
-
-export interface DadosCadastro {
-  nome: string;
-  email: string;
-  senha: string;
-  tipo: "voluntario" | "func";
-  aniversario: string;
-  tel: string;
-  end: string;
-  cep: string;
-  sobre: string;
-}
-
-export async function buscarUsuarioAtual(): Promise<Usuario> {
-  return (await api.get<Usuario>("/auth/me")).data;
-}
-
-async function lerResposta(
-  response: Response,
-): Promise<RespostaLoginServidor> {
-  const resultado: unknown = await response.json().catch(() => null);
-  if (!resultado || typeof resultado !== "object" || Array.isArray(resultado)) {
-    return {};
-  }
-  return resultado;
+  id: number;
+  tipo: string;
 }
 
 function lerPayloadToken(token: string): PayloadToken {
@@ -47,77 +21,122 @@ function lerPayloadToken(token: string): PayloadToken {
 
   try {
     const base64 = segmento.replace(/-/g, "+").replace(/_/g, "/");
-    const payload = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
-    return JSON.parse(payload) as PayloadToken;
+    const payloadBytes = Uint8Array.from(
+      atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "=")),
+      (character) => character.charCodeAt(0)
+    );
+    const payload = new TextDecoder().decode(payloadBytes);
+    const parsed: unknown = JSON.parse(payload);
+    
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed) ||
+      !("id" in parsed) ||
+      typeof parsed.id !== "number" ||
+      !Number.isInteger(parsed.id) ||
+      parsed.id < 1 ||
+      !("tipo" in parsed) ||
+      typeof parsed.tipo !== "string"
+    ) {
+      throw new Error("O servidor retornou um token inválido.");
+    }
+    return { id: parsed.id, tipo: parsed.tipo };
   } catch {
     throw new Error("O servidor retornou um token inválido.");
   }
 }
 
-function tipoParaContrato(
-  perfil: ReturnType<typeof normalizarTipoUsuario>,
-): TipoUsuario {
+function tipoParaContrato(perfil: ReturnType<typeof normalizarTipoUsuario>): TipoUsuario {
   if (perfil === "admin") return "adm";
   if (perfil === "colaborador") return "func";
   return "voluntario";
 }
 
-export async function autenticarUsuario(
-  email: string,
-  senha: string,
-): Promise<LoginResposta> {
-  const response = await fetch(`${API_BASE_URL}/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, senha }),
-  });
-  const resultado = await lerResposta(response);
-  if (!response.ok || typeof resultado.token !== "string") {
-    throw new Error(
-      resultado.mensagem || resultado.message || "Não foi possível entrar.",
-    );
+export async function buscarUsuarioAtual(): Promise<Usuario> {
+  const sessao = obterSessaoUsuario();
+  if (!sessao) {
+    throw new Error("A sessão não contém um usuário válido. Entre novamente.");
   }
 
-  const payload = lerPayloadToken(resultado.token);
-  if (!payload.tipo) throw new Error("O perfil da conta não foi informado.");
-
-  const perfil = normalizarTipoUsuario(payload.tipo);
-  const nome =
-    perfil === "admin"
-      ? "Administrador"
-      : perfil === "colaborador"
-        ? "Colaborador"
-        : "Voluntário";
+  const id = Number(sessao.id);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    throw new Error("A sessão contém um identificador de usuário inválido.");
+  }
 
   return {
-    token: resultado.token,
-    usuario: {
-      id: payload.id ?? 1,
-      nome,
-      email,
-      tipo: tipoParaContrato(perfil),
-    },
+    id,
+    nome: sessao.nome,
+    email: sessao.email,
+    tipo: tipoParaContrato(sessao.tipo),
   };
 }
 
-export async function cadastrarUsuario(
-  dados: DadosCadastro,
-): Promise<{ mensagem: string }> {
-  const response = await fetch(`${API_BASE_URL}/cadastro`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dados),
-  });
-  const resultado = await lerResposta(response);
-  if (!response.ok) {
-    throw new Error(
-      resultado.mensagem || resultado.message || "Não foi possível cadastrar.",
+export async function autenticarUsuario(
+  email: string,
+  senha: string
+): Promise<LoginRespostasFrontend> {
+  try {
+    const { data: resultado } = await api.post<LoginRespostasServidor>(
+      "/login",
+      { email, senha }
     );
+
+    if (typeof resultado.token !== "string") {
+      throw new Error(
+        resultado.mensagem || "Não foi possível entrar."
+      );
+    }
+
+    const payload = lerPayloadToken(resultado.token);
+    const perfilNormalizado = normalizarTipoUsuario(payload.tipo);
+    
+    const nomeAmigavel = 
+      perfilNormalizado === "admin"
+        ? "Administrador"
+        : perfilNormalizado === "colaborador"
+        ? "Colaborador"
+        : "Voluntário";
+
+    return {
+      token: resultado.token,
+      usuario: {
+        id: payload.id,
+        nome: resultado.usuario?.nome || nomeAmigavel,
+        email: email,
+        tipo: perfilNormalizado,
+      },
+    };
+  } catch (error) {
+    throw new Error(lerErro(error).mensagem, { cause: error });
   }
-  return {
-    mensagem:
-      typeof resultado.mensagem === "string"
-        ? resultado.mensagem
-        : "Cadastro realizado com sucesso.",
-  };
+}
+
+export async function cadastrarUsuario(
+  dados: CadastroDados
+): Promise<{ mensagem: string }> {
+  try {
+    // Traduz o tipo amigável para o que o back-end espera ("func" para funcionários)
+    const tipoBackend = dados.tipo === "funcionário" ? "func" : "voluntario";
+    
+    const payloadEnvio = {
+      ...dados,
+      tipo: tipoBackend,
+      cargo: tipoBackend === "func" ? (dados.cargo || "Colaborador da ONG") : undefined,
+    };
+
+    const { data: resultado } = await api.post<LoginRespostasServidor>(
+      "/cadastro",
+      payloadEnvio
+    );
+
+    return {
+      mensagem:
+        typeof resultado.mensagem === "string"
+          ? resultado.mensagem
+          : "Cadastro realizado com sucesso.",
+    };
+  } catch (error) {
+    throw new Error(lerErro(error).mensagem, { cause: error });
+  }
 }
