@@ -1,22 +1,36 @@
-name: Deploy
+name: Deploy no Azure Web App
 
 on:
   push:
-    branches: [main]   # roda a cada push na branch main
+    branches: [main]
+  workflow_dispatch:   # permite rodar manualmente
+
+env:
+  AZURE_WEBAPP_NAME: frontend-ong   # troque pelo nome do seu App Service
+  NODE_VERSION: '20.x'
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
 
-      - name: Instalar dependências e gerar o build
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Instalar dependências e gerar build
         run: |
           npm ci
-          npm run build
+          npm run build --if-present
+          npm test --if-present
 
-      - name: Fazer o deploy
-        run: azure/webapps-deploy   # troque pelo comando/ação do seu provedor
-        env:
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      - name: Deploy no Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .
