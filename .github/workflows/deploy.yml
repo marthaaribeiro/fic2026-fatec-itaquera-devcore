@@ -1,0 +1,22 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]   # roda a cada push na branch main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências e gerar o build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Fazer o deploy
+        run: azure/webapps-deploy   # troque pelo comando/ação do seu provedor
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
